@@ -12,8 +12,7 @@ An online studio-style platform to design, customize, and generate high-precisio
 
 ## 🚀 Live Demo
 
-🔗 **Access the Application Directly:** [https://qrstudiopro.github.io](https://qrstudiopro.github.io)
-
+🔗 **Access the Application Directly:** [https://dineth-h.github.io/qrstudiopro](https://dineth-h.github.io/qrstudiopro)
 ---
 
 ## ✨ Key Features
@@ -82,7 +81,7 @@ Since **QR Code Studio** is built as a zero-dependency static application, no No
 1. Push your changes to the `main` or `gh-pages` branch.
 2. Go to **Settings** > **Pages** in your GitHub repository.
 3. Select the source branch as `main` (root folder `/`) and click **Save**.
-4. Your site will be published automatically at `https://qrstudiopro.github.io`.
+4. Your site will be published automatically at `https://dineth-h.github.io/qrstudiopro`.
 
 ---
 
