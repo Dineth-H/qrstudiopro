@@ -1,1213 +1,626 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QR Code Studio</title>
-
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#f0f7ff',
-              100: '#e0effe',
-              500: '#3b82f6',
-              600: '#2563eb',
-              700: '#1d4ed8',
-              900: '#1e3a8a',
-            }
-          },
-          animation: {
-            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            'float': 'float 6s ease-in-out infinite',
-          },
-          keyframes: {
-            float: {
-              '0%, 100%': { transform: 'translateY(0px)' },
-              '50%': { transform: 'translateY(-10px)' },
-            }
-          }
-        }
-      }
-    }
-  </script>
-  
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <title>QR Studio Pro</title>
+  <!-- Third-party CDN Dependencies -->
   <script src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    body {
-      font-family: 'Inter', sans-serif;
+    :root[data-theme="light"] {
+      --bg-main: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-input: #f8fafc;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #cbd5e1;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --card-inner: #f8fafc;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
     }
 
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+    :root[data-theme="dark"] {
+      --bg-main: #0b0f19;
+      --bg-card: #151c2c;
+      --bg-input: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --primary: #3b82f6;
+      --primary-hover: #60a5fa;
+      --card-inner: #0f172a;
+      --shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
     }
-    ::-webkit-scrollbar-track {
-      background: transparent;
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg-main); color: var(--text-main); padding: 20px 16px 40px; min-height: 100vh; transition: background-color 0.3s, color 0.3s; }
+    
+    .header-bar { max-width: 1150px; margin: 0 auto 20px; display: flex; justify-content: space-between; align-items: center; }
+    .brand { display: flex; align-items: center; gap: 10px; font-size: 1.3rem; font-weight: 800; color: var(--text-main); }
+    .brand-icon { width: 32px; height: 32px; background: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; }
+    
+    /* Theme Toggle Switch */
+    .theme-switch-wrapper { display: flex; align-items: center; gap: 8px; }
+    .theme-switch { position: relative; display: inline-block; width: 48px; height: 26px; }
+    .theme-switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .3s; border-radius: 34px; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .3s; border-radius: 50%; }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(22px); }
+
+    .app-layout { max-width: 1150px; margin: 0 auto; display: grid; grid-template-columns: 1fr 420px; gap: 24px; }
+    @media (max-width: 960px) { .app-layout { grid-template-columns: 1fr; } }
+
+    .panel { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); }
+    h2 { font-size: 1.05rem; margin: 20px 0 12px; color: var(--text-main); display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+    h2:first-of-type { margin-top: 0; }
+    
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 0.825rem; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); }
+    input[type="text"], input[type="url"], input[type="email"], input[type="password"], textarea, select {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; outline: none; background: var(--bg-input); color: var(--text-main); transition: border-color 0.2s;
     }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(156, 163, 175, 0.5);
+    input:focus, textarea:focus, select:focus { border-color: var(--primary); }
+    
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .color-picker { display: flex; align-items: center; gap: 10px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 4px 8px; }
+    .color-picker input[type="color"] { width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; background: none; }
+    .color-picker span { font-size: 0.8rem; font-family: monospace; color: var(--text-muted); }
+
+    /* Drawer Styles */
+    .drawer { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-top: 10px; display: none; }
+    .drawer.active { display: block; }
+    
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .toggle-label { font-size: 0.875rem; font-weight: 600; color: var(--text-main); }
+    
+    /* Live Preview Column */
+    .preview-sticky { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 16px; align-items: center; }
+    
+    .qr-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      box-shadow: var(--shadow);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .badge-cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 16px;
       border-radius: 9999px;
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      height: 24px;
     }
-    .dark ::-webkit-scrollbar-thumb {
-      background: rgba(75, 85, 99, 0.5);
-    }
-
-    /* Custom Toggle Switch styling */
-    .toggle-checkbox:checked {
-      right: 0;
-      border-color: #3b82f6;
-    }
-    .toggle-checkbox:checked + .toggle-label {
-      background-color: #3b82f6;
-    }
-
-    /* Gradient Border Animation for Card Preview */
-    .animated-border {
-      position: relative;
-      background-clip: padding-box;
-    }
-    .animated-border::after {
-      content: '';
-      position: absolute;
-      top: -2px; bottom: -2px;
-      left: -2px; right: -2px;
-      background: linear-gradient(45deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6);
-      border-radius: 1rem;
-      z-index: -1;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      background-size: 300% 300%;
-      animation: gradientMove 6s ease infinite;
-    }
-    .animated-border:hover::after {
-      opacity: 0.6;
-    }
-    @keyframes gradientMove {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-  </style>
-</head>
-
-<body class="bg-gray-50 text-gray-800 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300 min-h-screen flex flex-col">
-
-  <!-- TOP HEADER & NAVBAR -->
-  <header class="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-colors">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      
-      <!-- Logo Brand -->
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-          <i class="fa-solid font-bold fa-qrcode text-xl"></i>
-        </div>
-        <div>
-          <h1 class="text-lg font-bold tracking-tight text-gray-900 dark:text-white leading-none">QR Code Studio</h1>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Generator & Visual Designer</p>
-        </div>
-      </div>
-
-      <!-- Theme Switcher Switch Slider -->
-      <div class="flex items-center gap-3">
-        <span class="text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-          <i class="fa-solid fa-sun text-amber-500 hidden dark:inline"></i>
-          <i class="fa-solid fa-moon text-indigo-400 inline dark:hidden"></i>
-          <span class="hidden sm:inline" id="themeLabelText">Theme</span>
-        </span>
-        
-        <!-- Toggle Switch -->
-        <label for="themeToggle" class="relative inline-flex items-center cursor-pointer select-none">
-          <input type="checkbox" id="themeToggle" class="sr-only peer">
-          <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:peer-checked:after:border-gray-600 peer-checked:bg-blue-600"></div>
-        </label>
-      </div>
-
-    </div>
-  </header>
-
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-
-      <!-- LEFT COLUMN: SETTINGS & CONTROLS (7 Columns) -->
-      <div class="lg:col-span-7 space-y-6">
-
-        <!-- 1. Content Type Selector Tabs -->
-        <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800 shadow-sm">
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider mb-4 flex items-center gap-2">
-            <i class="fa-solid fa-layer-group text-blue-500"></i>
-            Select Data Type
-          </h2>
-
-          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2" id="dataTypeTabs">
-            <button data-type="url" class="tab-btn active p-2.5 rounded-xl border border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex flex-col items-center gap-1.5 transition-all">
-              <i class="fa-solid fa-link text-lg"></i>
-              <span class="text-xs font-medium">Link</span>
-            </button>
-            <button data-type="text" class="tab-btn p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-gray-300 text-gray-600 dark:text-gray-400 flex flex-col items-center gap-1.5 transition-all">
-              <i class="fa-solid fa-align-left text-lg"></i>
-              <span class="text-xs font-medium">Text</span>
-            </button>
-            <button data-type="wifi" class="tab-btn p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-gray-300 text-gray-600 dark:text-gray-400 flex flex-col items-center gap-1.5 transition-all">
-              <i class="fa-solid fa-wifi text-lg"></i>
-              <span class="text-xs font-medium">Wi-Fi</span>
-            </button>
-            <button data-type="vcard" class="tab-btn p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-gray-300 text-gray-600 dark:text-gray-400 flex flex-col items-center gap-1.5 transition-all">
-              <i class="fa-solid fa-address-card text-lg"></i>
-              <span class="text-xs font-medium">Contact</span>
-            </button>
-            <button data-type="email" class="tab-btn p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-gray-300 text-gray-600 dark:text-gray-400 flex flex-col items-center gap-1.5 transition-all">
-              <i class="fa-solid fa-envelope text-lg"></i>
-              <span class="text-xs font-medium">Email</span>
-            </button>
-            <button data-type="sms" class="tab-btn p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-gray-300 text-gray-600 dark:text-gray-400 flex flex-col items-center gap-1.5 transition-all">
-              <i class="fa-solid fa-comment-dots text-lg"></i>
-              <span class="text-xs font-medium">Message</span>
-            </button>
-            <button data-type="file" class="tab-btn p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-gray-300 text-gray-600 dark:text-gray-400 flex flex-col items-center gap-1.5 transition-all">
-              <i class="fa-solid fa-file-arrow-up text-lg"></i>
-              <span class="text-xs font-medium">File</span>
-            </button>
-          </div>
-
-          <!-- Dynamic Input Forms Container -->
-          <div class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800/60" id="dynamicFormContainer">
-
-            <!-- URL FORM -->
-            <div id="form-url" class="type-form space-y-3">
-              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300">Website URL</label>
-              <div class="relative">
-                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fa-solid fa-globe"></i></span>
-                <input type="url" id="input-url" value="https://example.com" placeholder="https://yourwebsite.com" class="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition">
-              </div>
-            </div>
-
-            <!-- TEXT FORM -->
-            <div id="form-text" class="type-form hidden space-y-3">
-              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300">Plain Text</label>
-              <textarea id="input-text" rows="3" placeholder="Enter custom message or plain text..." class="w-full p-3 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition">Welcome to our platform!</textarea>
-            </div>
-
-            <!-- WIFI FORM -->
-            <div id="form-wifi" class="type-form hidden space-y-3">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Network Name (SSID)</label>
-                  <input type="text" id="wifi-ssid" placeholder="MyWiFiNetwork" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Encryption</label>
-                  <select id="wifi-type" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="WPA">WPA/WPA2/WPA3</option>
-                    <option value="WEP">WEP</option>
-                    <option value="nopass">None (Open)</option>
-                  </select>
-                </div>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
-                <div>
-                  <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Password</label>
-                  <input type="password" id="wifi-password" placeholder="Password" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="flex items-center gap-2 pt-5">
-                  <input type="checkbox" id="wifi-hidden" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
-                  <label for="wifi-hidden" class="text-xs font-medium text-gray-600 dark:text-gray-300">Hidden Network</label>
-                </div>
-              </div>
-            </div>
-
-            <!-- VCARD FORM -->
-            <div id="form-vcard" class="type-form hidden space-y-3">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input type="text" id="vcard-fn" placeholder="First Name" class="px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                <input type="text" id="vcard-ln" placeholder="Last Name" class="px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input type="tel" id="vcard-phone" placeholder="Phone (+1234567890)" class="px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                <input type="email" id="vcard-email" placeholder="Email Address" class="px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <input type="text" id="vcard-company" placeholder="Company" class="px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                <input type="text" id="vcard-title" placeholder="Job Title" class="px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                <input type="url" id="vcard-url" placeholder="Website" class="px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-              </div>
-            </div>
-
-            <!-- EMAIL FORM -->
-            <div id="form-email" class="type-form hidden space-y-3">
-              <input type="email" id="email-to" placeholder="Recipient (contact@domain.com)" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-              <input type="text" id="email-subject" placeholder="Email Subject" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-              <textarea id="email-body" rows="2" placeholder="Email Body message..." class="w-full p-3 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-            </div>
-
-            <!-- SMS / WHATSAPP FORM -->
-            <div id="form-sms" class="type-form hidden space-y-3">
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Service Platform</label>
-                  <select id="sms-mode" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="whatsapp">WhatsApp</option>
-                    <option value="sms">SMS Message</option>
-                  </select>
-                </div>
-                <div class="sm:col-span-2">
-                  <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Phone Number</label>
-                  <input type="tel" id="sms-phone" placeholder="+1234567890" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-              </div>
-              <textarea id="sms-message" rows="2" placeholder="Pre-filled message text..." class="w-full p-3 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-            </div>
-
-            <!-- FILE / MEDIA FORM -->
-            <div id="form-file" class="type-form hidden space-y-3">
-              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300">File Upload / Media URL</label>
-              <div class="p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl text-center hover:border-blue-500 transition cursor-pointer bg-gray-50/50 dark:bg-gray-800/30" id="fileDropZone">
-                <i class="fa-solid fa-cloud-arrow-up text-2xl text-blue-500 mb-1"></i>
-                <p class="text-xs font-medium text-gray-600 dark:text-gray-300">Click to upload or drag file here</p>
-                <p class="text-[10px] text-gray-400 mt-1">Converts image / document to data string</p>
-                <input type="file" id="file-input" class="hidden">
-              </div>
-              <div class="relative mt-2">
-                <span class="text-xs text-gray-400 block text-center my-1">OR enter direct File URL</span>
-                <input type="url" id="file-url" placeholder="https://domain.com/document.pdf" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- 2. Customization Options Accordions -->
-        <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800 shadow-sm space-y-5">
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider flex items-center gap-2">
-            <i class="fa-solid fa-palette text-indigo-500"></i>
-            Styling & Appearance
-          </h2>
-
-          <!-- Patterns & Colors Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            <!-- Dots Pattern Style -->
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-gray-600 dark:text-gray-300">Pattern Style</label>
-              <select id="dotStyle" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="square">Square</option>
-                <option value="dots">Dots</option>
-                <option value="rounded" selected>Rounded</option>
-                <option value="extra-rounded">Extra Rounded</option>
-                <option value="classy">Classy</option>
-                <option value="classy-rounded">Classy Rounded</option>
-              </select>
-            </div>
-
-            <!-- Error Correction Level -->
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-gray-600 dark:text-gray-300">Error Correction</label>
-              <select id="ecLevel" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="L">Low (7%)</option>
-                <option value="M">Medium (15%)</option>
-                <option value="Q">Quartile (25%)</option>
-                <option value="H" selected>High (30% - Best with Logo)</option>
-              </select>
-            </div>
-
-            <!-- Foreground / Gradient -->
-            <div class="space-y-2 col-span-1 md:col-span-2 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Pattern Color & Gradient</span>
-                <label class="flex items-center gap-1.5 cursor-pointer text-xs">
-                  <input type="checkbox" id="enableGradient" class="rounded text-blue-600">
-                  <span class="text-gray-600 dark:text-gray-400">Gradient</span>
-                </label>
-              </div>
-
-              <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2">
-                  <input type="color" id="fgColor1" value="#1e3a8a" class="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent">
-                  <span class="text-xs font-mono text-gray-500" id="fgColor1Val">#1e3a8a</span>
-                </div>
-
-                <div id="gradientColor2Group" class="hidden flex items-center gap-2">
-                  <span class="text-xs text-gray-400">&rarr;</span>
-                  <input type="color" id="fgColor2" value="#3b82f6" class="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent">
-                  <span class="text-xs font-mono text-gray-500" id="fgColor2Val">#3b82f6</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Background Color -->
-            <div class="space-y-2 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Background</span>
-                <label class="flex items-center gap-1.5 cursor-pointer text-xs">
-                  <input type="checkbox" id="transparentBg" class="rounded text-blue-600">
-                  <span class="text-gray-600 dark:text-gray-400">Transparent</span>
-                </label>
-              </div>
-              <div class="flex items-center gap-2">
-                <input type="color" id="bgColor" value="#ffffff" class="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent">
-                <span class="text-xs font-mono text-gray-500" id="bgColorVal">#ffffff</span>
-              </div>
-            </div>
-
-            <!-- Corners Customization -->
-            <div class="space-y-2 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800">
-              <span class="text-xs font-medium text-gray-700 dark:text-gray-300 block">Corners Frame & Eyeball</span>
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <select id="cornerFrameStyle" class="w-full px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-xs">
-                    <option value="square">Square Frame</option>
-                    <option value="dot">Dot Frame</option>
-                    <option value="extra-rounded" selected>Rounded Frame</option>
-                  </select>
-                </div>
-                <div class="flex items-center gap-1">
-                  <input type="color" id="cornerFrameColor" value="#1e3a8a" class="w-7 h-7 rounded cursor-pointer border-0">
-                  <span class="text-[10px] font-mono text-gray-500" id="cornerFrameColorVal">#1e3a8a</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- 3. Center Logo Options -->
-          <div class="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-3">
-            <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
-              <span>Center Logo / Brand Icon</span>
-              <button id="clearLogoBtn" class="text-[11px] text-red-500 hover:underline hidden">Remove Logo</button>
-            </label>
-
-            <!-- Quick Presets -->
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="text-xs text-gray-400">Presets:</span>
-              <button class="preset-logo-btn p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs" data-icon="wifi"><i class="fa-solid fa-wifi text-blue-500"></i></button>
-              <button class="preset-logo-btn p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs" data-icon="globe"><i class="fa-solid fa-globe text-indigo-500"></i></button>
-              <button class="preset-logo-btn p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs" data-icon="whatsapp"><i class="fa-brands fa-whatsapp text-emerald-500"></i></button>
-              <button class="preset-logo-btn p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs" data-icon="instagram"><i class="fa-brands fa-instagram text-pink-500"></i></button>
-              <button class="preset-logo-btn p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs" data-icon="envelope"><i class="fa-solid fa-envelope text-amber-500"></i></button>
-              <button class="preset-logo-btn p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs" data-icon="heart"><i class="fa-solid fa-heart text-red-500"></i></button>
-              <button class="preset-logo-btn p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs" data-icon="star"><i class="fa-solid fa-star text-yellow-500"></i></button>
-              
-              <label for="customLogoInput" class="cursor-pointer px-2 py-1 rounded-lg border border-dashed border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-xs font-medium flex items-center gap-1">
-                <i class="fa-solid fa-upload"></i> Upload
-              </label>
-              <input type="file" id="customLogoInput" accept="image/*" class="hidden">
-            </div>
-
-            <!-- Logo Size & Margin Sliders -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              <div>
-                <div class="flex justify-between text-[11px] text-gray-500 mb-1">
-                  <span>Logo Size</span>
-                  <span id="logoSizeVal">30%</span>
-                </div>
-                <input type="range" id="logoSize" min="0.1" max="0.4" step="0.02" value="0.3" class="w-full accent-blue-600">
-              </div>
-              <div>
-                <div class="flex justify-between text-[11px] text-gray-500 mb-1">
-                  <span>Logo Margin</span>
-                  <span id="logoMarginVal">6px</span>
-                </div>
-                <input type="range" id="logoMargin" min="0" max="20" step="1" value="6" class="w-full accent-blue-600">
-              </div>
-            </div>
-          </div>
-
-          <!-- 4. Text Annotations & Label Fields -->
-          <div class="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-3">
-            <h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300">Card Labels & Annotations</h3>
-            
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-[11px] text-gray-500 mb-1">Top Badge Label</label>
-                <input type="text" id="labelBadge" value="SCAN ME" placeholder="e.g., SCAN ME" class="w-full px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500">
-              </div>
-              <div>
-                <label class="block text-[11px] text-gray-500 mb-1">Title</label>
-                <input type="text" id="labelTitle" value="Connect Quickly" placeholder="e.g., Guest Network" class="w-full px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500">
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-[11px] text-gray-500 mb-1">Subtitle</label>
-                <input type="text" id="labelSubtitle" value="Scan with camera app" placeholder="e.g., Instant Access" class="w-full px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500">
-              </div>
-              <div>
-                <label class="block text-[11px] text-gray-500 mb-1">Footer Note</label>
-                <input type="text" id="labelFooter" value="Point camera at code to open" placeholder="e.g., Valid for all devices" class="w-full px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500">
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
-      <!-- RIGHT COLUMN: LIVE PREVIEW & ACTIONS (5 Columns) -->
-      <div class="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
-
-        <!-- PREVIEW CARD CONTAINER -->
-        <div class="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-xl flex flex-col items-center text-center transition-all relative overflow-hidden" id="qrCardPreview">
-          
-          <!-- Top Badge -->
-          <div id="cardBadge" class="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 mb-3 shadow-sm">
-            SCAN ME
-          </div>
-
-          <!-- Card Header Titles -->
-          <h2 id="cardTitle" class="text-lg font-bold text-gray-900 dark:text-white leading-tight">Connect Quickly</h2>
-          <p id="cardSubtitle" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 mb-4">Scan with camera app</p>
-
-          <!-- QR Code Target Render Container -->
-          <div class="p-4 bg-white rounded-2xl shadow-inner border border-gray-100 dark:border-gray-800/80 my-2 flex items-center justify-center min-h-[260px] min-w-[260px]" id="qrCanvasContainer">
-            <!-- QR code canvas/SVG rendered here dynamically -->
-          </div>
-
-          <!-- Card Footer Note -->
-          <p id="cardFooter" class="text-xs font-medium text-gray-500 dark:text-gray-400 mt-3 max-w-xs">Point camera at code to open</p>
-
-          <!-- Interactive Scanning Guide Accordion -->
-          <div id="guideAccordion" class="w-full mt-5 pt-4 border-t border-gray-100 dark:border-gray-800/80 text-left">
-            <button id="guideToggleBtn" class="w-full flex items-center justify-between text-xs font-semibold text-gray-700 dark:text-gray-300 py-1 focus:outline-none group">
-              <span class="flex items-center gap-1.5">
-                <i class="fa-solid fa-circle-question text-blue-500"></i>
-                How to scan this QR code
-              </span>
-              <i id="guideArrow" class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-200 group-hover:text-blue-500"></i>
-            </button>
-            
-            <div id="guideContent" class="hidden mt-3 space-y-2 text-xs text-gray-600 dark:text-gray-400 pl-1 pr-1 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800">
-              <div class="flex items-start gap-2">
-                <span class="w-4 h-4 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">1</span>
-                <span>Open your phone's default Camera app or QR Scanner.</span>
-              </div>
-              <div class="flex items-start gap-2">
-                <span class="w-4 h-4 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">2</span>
-                <span>Point camera steadily at the QR pattern.</span>
-              </div>
-              <div class="flex items-start gap-2">
-                <span class="w-4 h-4 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">3</span>
-                <span>Tap the notification banner or popup link that appears.</span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- ACTION BUTTONS TOOLBAR -->
-        <div class="space-y-3">
-          
-          <!-- Animated Presentation Button (Launches Showcase Tab Window) -->
-          <button id="btnLaunchShowcase" class="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white font-semibold text-sm shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0">
-            <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
-            <span>Launch Presentation</span>
-          </button>
-
-          <!-- Download Options Grid -->
-          <div class="grid grid-cols-2 gap-3">
-            <button id="btnDownloadCard" class="py-2.5 px-3 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-medium text-xs hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm flex items-center justify-center gap-2 transition">
-              <i class="fa-solid fa-download"></i>
-              <span>Export PNG</span>
-            </button>
-
-            <button id="btnDownloadPureQr" class="py-2.5 px-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-medium text-xs hover:bg-gray-50 dark:hover:bg-gray-700/60 shadow-sm flex items-center justify-center gap-2 transition">
-              <i class="fa-solid fa-qrcode"></i>
-              <span>Download QR Only</span>
-            </button>
-
-            <button id="btnDownloadPdf" class="py-2.5 px-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-medium text-xs hover:bg-gray-50 dark:hover:bg-gray-700/60 shadow-sm flex items-center justify-center gap-2 transition">
-              <i class="fa-solid fa-file-pdf text-red-500"></i>
-              <span>Export PDF</span>
-            </button>
-
-            <button id="btnCopyImage" class="py-2.5 px-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-medium text-xs hover:bg-gray-50 dark:hover:bg-gray-700/60 shadow-sm flex items-center justify-center gap-2 transition">
-              <i class="fa-solid fa-copy text-blue-500"></i>
-              <span>Copy Image</span>
-            </button>
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-  </main>
-
-  <!-- TOAST NOTIFICATION CONTAINER -->
-  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-12 opacity-0 transition-all duration-300 pointer-events-none bg-gray-900 text-white dark:bg-white dark:text-gray-900 px-4 py-2.5 rounded-xl shadow-2xl text-xs font-medium flex items-center gap-2">
-    <i class="fa-solid fa-circle-check text-emerald-400 dark:text-emerald-600"></i>
-    <span id="toastMsg">Action completed successfully</span>
-  </div>
-
-  <!-- FOOTER SECTION -->
-  <footer class="mt-auto py-6 border-t border-gray-200 dark:border-gray-800/80 bg-white dark:bg-gray-900 text-center text-xs text-gray-500 dark:text-gray-400">
-    <div class="max-w-7xl mx-auto px-4">
-      <p>&copy; 2026 All rights reserved | Developer: DHStackWorks (dinethhesara20@gmail.com)</p>
-    </div>
-  </footer>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      
-      // --- 1. THEME MANAGEMENT (System preference detection + Slider switch) ---
-      const themeToggle = document.getElementById('themeToggle');
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-
-      function applyTheme(isDark) {
-        if (isDark) {
-          document.documentElement.classList.add('dark');
-          themeToggle.checked = true;
-        } else {
-          document.documentElement.classList.remove('dark');
-          themeToggle.checked = false;
-        }
-      }
-
-      // Initial check on browser/device preference
-      applyTheme(prefersDark.matches);
-
-      // Listen for system theme changes dynamically
-      prefersDark.addEventListener('change', (e) => {
-        applyTheme(e.matches);
-      });
-
-      // Slider Toggle Manual Event
-      themeToggle.addEventListener('change', () => {
-        applyTheme(themeToggle.checked);
-      });
-
-
-      // --- 2. QR CODE STYLING ENGINE INSTANCE ---
-      let currentLogoData = null;
-
-      const qrCode = new QRCodeStyling({
-        width: 260,
-        height: 260,
-        type: 'canvas',
-        data: 'https://example.com',
-        image: '',
-        dotsOptions: {
-          color: '#1e3a8a',
-          type: 'rounded'
-        },
-        backgroundOptions: {
-          color: '#ffffff',
-        },
-        imageOptions: {
-          crossOrigin: 'anonymous',
-          margin: 6,
-          imageSize: 0.3
-        },
-        cornersSquareOptions: {
-          type: 'extra-rounded',
-          color: '#1e3a8a'
-        },
-        cornersDotOptions: {
-          type: 'dot',
-          color: '#1e3a8a'
-        },
-        qrOptions: {
-          errorCorrectionLevel: 'H'
-        }
-      });
-
-      const qrContainer = document.getElementById('qrCanvasContainer');
-      qrCode.append(qrContainer);
-
-
-      // --- 3. DATA DATA BUILDERS ---
-      let activeType = 'url';
-
-      function generateDataString() {
-        switch (activeType) {
-          case 'url':
-            return document.getElementById('input-url').value.trim() || 'https://example.com';
-
-          case 'text':
-            return document.getElementById('input-text').value.trim() || 'Hello';
-
-          case 'wifi':
-            const ssid = document.getElementById('wifi-ssid').value.trim() || 'MyWiFi';
-            const pass = document.getElementById('wifi-password').value.trim();
-            const type = document.getElementById('wifi-type').value;
-            const hidden = document.getElementById('wifi-hidden').checked;
-            return `WIFI:T:${type};S:${ssid};P:${pass};H:${hidden ? 'true' : 'false'};;`;
-
-          case 'vcard':
-            const fn = document.getElementById('vcard-fn').value.trim() || 'John';
-            const ln = document.getElementById('vcard-ln').value.trim() || 'Doe';
-            const phone = document.getElementById('vcard-phone').value.trim();
-            const email = document.getElementById('vcard-email').value.trim();
-            const company = document.getElementById('vcard-company').value.trim();
-            const job = document.getElementById('vcard-title').value.trim();
-            const web = document.getElementById('vcard-url').value.trim();
-
-            return `BEGIN:VCARD\nVERSION:3.0\nN:${ln};${fn};;;\nFN:${fn} ${ln}\nTEL;TYPE=CELL:${phone}\nEMAIL:${email}\nORG:${company}\nTITLE:${job}\nURL:${web}\nEND:VCARD`;
-
-          case 'email':
-            const mailTo = document.getElementById('email-to').value.trim();
-            const subject = document.getElementById('email-subject').value.trim();
-            const body = document.getElementById('email-body').value.trim();
-            return `mailto:${mailTo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-
-          case 'sms':
-            const mode = document.getElementById('sms-mode').value;
-            const num = document.getElementById('sms-phone').value.trim();
-            const msg = document.getElementById('sms-message').value.trim();
-            if (mode === 'whatsapp') {
-              const cleanNum = num.replace(/[^0-9]/g, '');
-              return `https://wa.me/${cleanNum}?text=${encodeURIComponent(msg)}`;
-            } else {
-              return `sms:${num}?body=${encodeURIComponent(msg)}`;
-            }
-
-          case 'file':
-            return window.uploadedFileData || document.getElementById('file-url').value.trim() || 'https://example.com';
-
-          default:
-            return 'https://example.com';
-        }
-      }
-
-
-      // --- 4. LIVE QR UPDATE ENGINE ---
-      function updateQrCode() {
-        const dataStr = generateDataString();
-
-        const dotStyle = document.getElementById('dotStyle').value;
-        const ecLevel = document.getElementById('ecLevel').value;
-        const fg1 = document.getElementById('fgColor1').value;
-        const fg2 = document.getElementById('fgColor2').value;
-        const isGradient = document.getElementById('enableGradient').checked;
-
-        const isTransparent = document.getElementById('transparentBg').checked;
-        const bgCol = isTransparent ? 'transparent' : document.getElementById('bgColor').value;
-
-        const cornerFrameStyle = document.getElementById('cornerFrameStyle').value;
-        const cornerFrameColor = document.getElementById('cornerFrameColor').value;
-
-        const logoSize = parseFloat(document.getElementById('logoSize').value);
-        const logoMargin = parseInt(document.getElementById('logoMargin').value, 10);
-
-        // Build Dots Options
-        const dotsOptions = {
-          type: dotStyle
-        };
-
-        if (isGradient) {
-          dotsOptions.gradient = {
-            type: 'linear',
-            rotation: 45,
-            colorStops: [
-              { offset: 0, color: fg1 },
-              { offset: 1, color: fg2 }
-            ]
-          };
-          delete dotsOptions.color;
-        } else {
-          dotsOptions.color = fg1;
-          delete dotsOptions.gradient;
-        }
-
-        qrCode.update({
-          data: dataStr,
-          image: currentLogoData || '',
-          dotsOptions: dotsOptions,
-          backgroundOptions: {
-            color: bgCol
-          },
-          cornersSquareOptions: {
-            type: cornerFrameStyle,
-            color: cornerFrameColor
-          },
-          cornersDotOptions: {
-            type: cornerFrameStyle === 'dot' ? 'dot' : 'square',
-            color: cornerFrameColor
-          },
-          imageOptions: {
-            crossOrigin: 'anonymous',
-            margin: logoMargin,
-            imageSize: logoSize
-          },
-          qrOptions: {
-            errorCorrectionLevel: ecLevel
-          }
-        });
-
-        // Update Labels text
-        document.getElementById('cardBadge').textContent = document.getElementById('labelBadge').value || 'SCAN ME';
-        document.getElementById('cardTitle').textContent = document.getElementById('labelTitle').value || 'Connect Quickly';
-        document.getElementById('cardSubtitle').textContent = document.getElementById('labelSubtitle').value || 'Scan with camera app';
-        document.getElementById('cardFooter').textContent = document.getElementById('labelFooter').value || 'Point camera at code to open';
-      }
-
-
-      // Tab switching logic
-      const tabBtns = document.querySelectorAll('.tab-btn');
-      const formSections = document.querySelectorAll('.type-form');
-
-      tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          tabBtns.forEach(b => {
-            b.classList.remove('active', 'border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/30', 'text-blue-600', 'dark:text-blue-400');
-            b.classList.add('border-gray-200', 'dark:border-gray-800', 'text-gray-600', 'dark:text-gray-400');
-          });
-
-          btn.classList.add('active', 'border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/30', 'text-blue-600', 'dark:text-blue-400');
-          btn.classList.remove('border-gray-200', 'dark:border-gray-800', 'text-gray-600', 'dark:text-gray-400');
-
-          activeType = btn.getAttribute('data-type');
-          formSections.forEach(f => f.classList.add('hidden'));
-          document.getElementById(`form-${activeType}`).classList.remove('hidden');
-
-          updateQrCode();
-        });
-      });
-
-      // Bind input events for live updates
-      const allInputs = document.querySelectorAll('input, select, textarea');
-      allInputs.forEach(input => {
-        input.addEventListener('input', updateQrCode);
-        input.addEventListener('change', updateQrCode);
-      });
-
-      // Color displays & Gradient toggle
-      document.getElementById('enableGradient').addEventListener('change', (e) => {
-        document.getElementById('gradientColor2Group').classList.toggle('hidden', !e.target.checked);
-        updateQrCode();
-      });
-
-      ['fgColor1', 'fgColor2', 'bgColor', 'cornerFrameColor'].forEach(id => {
-        const el = document.getElementById(id);
-        const valEl = document.getElementById(id + 'Val');
-        if (el && valEl) {
-          el.addEventListener('input', () => {
-            valEl.textContent = el.value;
-            updateQrCode();
-          });
-        }
-      });
-
-      // Logo Sliders Text Update
-      document.getElementById('logoSize').addEventListener('input', (e) => {
-        document.getElementById('logoSizeVal').textContent = Math.round(e.target.value * 100) + '%';
-      });
-      document.getElementById('logoMargin').addEventListener('input', (e) => {
-        document.getElementById('logoMarginVal').textContent = e.target.value + 'px';
-      });
-
-
-      // --- 5. LOGO PRESETS & CUSTOM UPLOADS ---
-      const logoPresets = {
-        wifi: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" fill="%233b82f6"><path d="M0 192C0 103.6 143.3 32 320 32S640 103.6 640 192c0 24.4-10.8 47.7-29.8 65.7-18.9 17.9-45.2 28.3-73.2 28.3-51.2 0-93.5-35.3-103.1-83.3-15.5 8.7-33.8 13.3-53.9 13.3-33.7 0-63.7-13.3-85-35.3C273.7 202.7 243.7 216 210 216c-20.1 0-38.4-4.6-53.9-13.3C146.5 250.7 104.2 286 53 286c-28 0-54.3-10.4-73.2-28.3C-10.8 239.7 0 216.4 0 192zM320 352a96 96 0 1 1 0 192 96 96 0 1 1 0-192z"/></svg>',
-        globe: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="%236366f1"><path d="M512 256C512 397.4 397.4 512 256 512C114.6 512 0 397.4 0 256C0 114.6 114.6 0 256 0C397.4 0 512 114.6 512 256zM256 48c-29.1 0-57.3 5.2-83.2 14.7C191.5 90.7 208 126.3 208 166.4c0 38.2-15 72.8-39.7 98.4c18.1 27.2 48.7 45.2 83.7 47.1c8.4-32.9 38.3-57.9 74-57.9c13.7 0 26.5 3.7 37.6 10.1C380 231.2 384 196.1 384 160c0-61.9-25.1-117.9-65.6-158.4z"/></svg>',
-        whatsapp: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="%2310b981"><path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3 18.6-68.1-4.4-6.9c-18.6-29.5-28.4-63.3-28.4-98.2 0-101.4 82.5-184 184-184 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.5-84.9 184.3-186.3 184.3z"/></svg>',
-        instagram: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="%23ec4899"><path d="M224.1 141.1c-45.8 0-82.8 37-82.8 82.8 0 45.8 37 82.8 82.8 82.8 45.8 0 82.8-37 82.8-82.8 0-45.8-37-82.8-82.8-82.8zm0 135c-28.8 0-52.2-23.4-52.2-52.2 0-28.8 23.4-52.2 52.2-52.2 28.8 0 52.2 23.4 52.2 52.2 0 28.8-23.4 52.2-52.2 52.2zm120.2-143.1c-10.4 0-18.9 8.5-18.9 18.9s8.5 18.9 18.9 18.9 18.9-8.5 18.9-18.9-8.5-18.9-18.9-18.9zM224 0C100.3 0 0 100.3 0 224s100.3 224 224 224 224-100.3 224-224S347.7 0 224 0z"/></svg>',
-        envelope: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="%23f59e0b"><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4l217.6 163.2c11.4 8.5 27 8.5 38.4 0l217.6-163.2c12.1-9.1 19.2-23.3 19.2-38.4 0-26.5-21.5-48-48-48H48zM0 176v224c0 26.5 21.5 48 48 48h416c26.5 0 48-21.5 48-48V176L294.4 338.3c-22.8 17.1-54 17.1-76.8 0L0 176z"/></svg>',
-        heart: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="%23ef4444"><path d="M47.6 300.4L228.3 469.1c7.5 7 17.4 10.9 27.7 10.9s20.2-3.9 27.7-10.9L464.4 300.4c30.4-28.3 47.6-68 47.6-109.5v-5.8c0-69.9-50.5-129.5-119.4-141-34.7-5.8-70.8 2.7-98 23L256 90l-38.6-22c-27.2-20.3-63.3-28.8-98-23C50.5 56.5 0 116.1 0 186v5.8c0 41.5 17.2 81.2 47.6 109.5z"/></svg>',
-        star: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="%23eab308"><path d="M316.9 18C311.6 7 300.4 0 288 0s-23.6 7-28.9 18L180.9 179.6 7.1 204.8c-12.1 1.8-21.8 10.2-24.8 22s1.2 24.2 10.6 31.9l125.7 103-29.7 173.1c-2.1 12.1 2.9 24.3 12.8 31.5s23 8.3 33.7 2.7l152.5-80.2 152.5 80.2c10.7 5.6 23.9 4.5 33.7-2.7s14.9-19.4 12.8-31.5l-29.7-173.1 125.7-103c9.4-7.7 13.6-20.1 10.6-31.9s-12.7-20.2-24.8-22L395.1 179.6 316.9 18z"/></svg>'
-      };
-
-      document.querySelectorAll('.preset-logo-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const key = btn.getAttribute('data-icon');
-          currentLogoData = logoPresets[key];
-          document.getElementById('clearLogoBtn').classList.remove('hidden');
-          updateQrCode();
-        });
-      });
-
-      // Custom Logo Upload
-      document.getElementById('customLogoInput').addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (evt) => {
-            currentLogoData = evt.target.result;
-            document.getElementById('clearLogoBtn').classList.remove('hidden');
-            updateQrCode();
-          };
-          reader.readAsDataURL(file);
-        }
-      });
-
-      // Clear Logo
-      document.getElementById('clearLogoBtn').addEventListener('click', () => {
-        currentLogoData = null;
-        document.getElementById('clearLogoBtn').classList.add('hidden');
-        document.getElementById('customLogoInput').value = '';
-        updateQrCode();
-      });
-
-      // File Drag and drop convert
-      const fileDropZone = document.getElementById('fileDropZone');
-      const fileInput = document.getElementById('file-input');
-
-      fileDropZone.addEventListener('click', () => fileInput.click());
-      fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (evt) => {
-            window.uploadedFileData = evt.target.result;
-            showToast('File loaded and converted to code');
-            updateQrCode();
-          };
-          reader.readAsDataURL(file);
-        }
-      });
-
-
-      // --- 6. INTERACTIVE SCANNING GUIDE ACCORDION ---
-      const guideToggleBtn = document.getElementById('guideToggleBtn');
-      const guideContent = document.getElementById('guideContent');
-      const guideArrow = document.getElementById('guideArrow');
-
-      guideToggleBtn.addEventListener('click', () => {
-        const isHidden = guideContent.classList.contains('hidden');
-        if (isHidden) {
-          guideContent.classList.remove('hidden');
-          guideArrow.style.transform = 'rotate(180deg)';
-        } else {
-          guideContent.classList.add('hidden');
-          guideArrow.style.transform = 'rotate(0deg)';
-        }
-      });
-
-
-      // --- 7. ANIMATED PRESENTATION SCREEN (NEW TAB WINDOW) ---
-      document.getElementById('btnLaunchShowcase').addEventListener('click', () => {
-        
-        // 1. Get current QR canvas as data URL
-        const canvas = qrContainer.querySelector('canvas');
-        if (!canvas) {
-          showToast('Failed to prepare QR graphic');
-          return;
-        }
-        const qrDataUrl = canvas.toDataURL('image/png');
-
-        const title = document.getElementById('labelTitle').value || 'Connect Quickly';
-        const subtitle = document.getElementById('labelSubtitle').value || 'Scan with camera app';
-        const badge = document.getElementById('labelBadge').value || 'SCAN ME';
-        const footerNote = document.getElementById('labelFooter').value || 'Point camera at code to open';
-
-        // 2. Open new tab window
-        const presentationWin = window.open('', '_blank');
-
-        if (!presentationWin) {
-          showToast('Please allow popups to launch presentation');
-          return;
-        }
-
-        // 3. Write complete showcase HTML into new tab
-        const presentationHtml = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Presentation Showcase - ${title}</title>
-  <script src="https://cdn.tailwindcss.com"><\/script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background-color: #030712;
-      color: #f9fafb;
-      overflow-x: hidden;
-    }
-
-    /* Ambient Glowing Orbs */
-    .orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(100px);
-      opacity: 0.4;
-      animation: floatOrb 12s infinite ease-in-out alternate;
-    }
-    .orb-1 {
-      width: 400px; height: 400px;
-      background: #3b82f6;
-      top: -100px; left: -100px;
-    }
-    .orb-2 {
-      width: 450px; height: 450px;
-      background: #8b5cf6;
-      bottom: -150px; right: -100px;
-      animation-delay: -6s;
-    }
-
-    @keyframes floatOrb {
-      0% { transform: translate(0, 0) scale(1); }
-      100% { transform: translate(60px, 80px) scale(1.15); }
-    }
-
-    /* Outer Neon Glow Animation */
-    .neon-card-wrapper {
-      position: relative;
-      border-radius: 2rem;
-      background: rgba(17, 24, 39, 0.7);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 0 50px rgba(59, 130, 246, 0.25), 0 0 100px rgba(139, 92, 246, 0.15);
-      animation: cardEntrance 1s cubic-bezier(0.16, 1, 0.3, 1) forwards, cardFloat 6s ease-in-out infinite 1s;
-    }
-
-    .neon-card-wrapper::before {
-      content: '';
-      position: absolute;
-      inset: -2px;
-      border-radius: 2.1rem;
-      background: linear-gradient(45deg, #3b82f6, #ec4899, #8b5cf6, #3b82f6);
-      z-index: -1;
-      opacity: 0.7;
-      filter: blur(10px);
-      background-size: 300% 300%;
-      animation: shimmerSweep 8s linear infinite;
-    }
-
-    @keyframes cardEntrance {
-      0% { opacity: 0; transform: translateY(40px) scale(0.92); }
-      100% { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    @keyframes cardFloat {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-12px); }
-    }
-
-    @keyframes shimmerSweep {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-
-    /* Scannable Inner QR Container */
-    .scannable-qr-box {
+    
+    .card-title { font-size: 1.3rem; font-weight: 700; color: var(--text-main); line-height: 1.2; margin-bottom: 4px; text-align: center; }
+    .card-subtitle { font-size: 0.85rem; color: var(--text-muted); line-height: 1.3; margin-bottom: 16px; text-align: center; }
+    
+    .qr-wrapper {
       background: #ffffff;
-      padding: 1.5rem;
-      border-radius: 1.5rem;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      padding: 14px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      margin-bottom: 14px;
     }
+    
+    .card-desc { font-size: 0.825rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 16px; text-align: center; }
+
+    /* Dropdown Guide Alignment Fixes */
+    .guide-accordion { width: 100%; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; background: var(--bg-input); }
+    .guide-header { padding: 10px 14px; font-size: 0.825rem; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: var(--text-main); user-select: none; }
+    .guide-content { padding: 12px 14px; font-size: 0.8rem; color: var(--text-muted); display: none; border-top: 1px solid var(--border-color); background: var(--bg-card); text-align: left; }
+    .guide-content.open { display: block; }
+    
+    .guide-step { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+    .guide-step:last-child { margin-bottom: 0; }
+    .guide-step-num {
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px; /* Vertical alignment fix with text */
+    }
+    .guide-step-text { font-size: 0.8rem; line-height: 1.35; flex: 1; color: var(--text-muted); }
+
+    /* Button Group */
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+    .btn { padding: 11px 14px; border: none; border-radius: 10px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); }
+    .btn-secondary:hover { background: var(--border-color); }
+    .btn-presenter { grid-column: span 2; background: #8b5cf6; color: #fff; }
+    .btn-presenter:hover { background: #7c3aed; }
+
+    /* Presenter Overlay Screen */
+    .presenter-modal {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: #090d16; color: #ffffff; z-index: 99999; display: none;
+      flex-direction: column; padding: 30px; overflow-y: auto; box-sizing: border-box;
+    }
+    .presenter-modal.active { display: flex; }
+    .presenter-nav { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px; }
+    .presenter-close { background: #1e293b; border: 1px solid #334155; color: #fff; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    
+    .presenter-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; max-width: 1200px; margin: 0 auto; }
+    .presenter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; width: 100%; justify-content: center; align-items: center; }
+    
+    .presenter-card {
+      background: #111827; border: 1px solid #1f293d; border-radius: 20px; padding: 24px;
+      display: flex; flex-direction: column; align-items: center; text-align: center; position: relative;
+    }
+    .presenter-card.animated { animation: floatPulse 4s ease-in-out infinite alternate; box-shadow: 0 0 30px rgba(59, 130, 246, 0.2); }
+    
+    /* Animated Step-by-Step Arrow Flow */
+    .presenter-steps { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+    .presenter-step-item { background: #1e293b; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; color: #94a3b8; display: flex; align-items: center; gap: 6px; }
+    .presenter-arrow { color: var(--primary); font-weight: bold; }
+    .presenter-card.animated .presenter-arrow { animation: arrowGlow 1.5s infinite; }
+
+    @keyframes floatPulse { 0% { transform: translateY(0); } 100% { transform: translateY(-8px); box-shadow: 0 0 45px rgba(59, 130, 246, 0.4); } }
+    @keyframes arrowGlow { 0%, 100% { opacity: 0.3; transform: translateX(0); } 50% { opacity: 1; transform: translateX(3px); } }
+
+    /* Footer */
+    footer { text-align: center; margin-top: 40px; font-size: 0.8rem; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 20px; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between p-6 relative overflow-hidden">
+<body>
 
-  <!-- Background Orbs -->
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
+<div class="header-bar">
+  <div class="brand">
+    <div class="brand-icon">QR</div>
+    <span>QR Studio Pro</span>
+  </div>
+  <div class="theme-switch-wrapper">
+    <span style="font-size:0.8rem; color:var(--text-muted);">Dark Mode</span>
+    <label class="theme-switch">
+      <input type="checkbox" id="themeToggle" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+</div>
 
-  <!-- Top Controls Bar -->
-  <div class="relative z-20 flex items-center justify-between max-w-5xl mx-auto w-full">
-    <div class="flex items-center gap-2">
-      <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
-        <i class="fa-solid fa-qrcode"></i>
-      </div>
-      <span class="text-sm font-bold tracking-wider text-gray-300">PRESENTATION SHOWCASE</span>
+<div class="app-layout">
+  <!-- Controls Panel -->
+  <div class="panel">
+    <h2>1. Data & Content</h2>
+    <div class="form-group">
+      <label for="dataType">Content Type</label>
+      <select id="dataType">
+        <option value="link">Website Link</option>
+        <option value="text">Plain Text</option>
+        <option value="wifi">Wi-Fi Network</option>
+        <option value="vcard">Contact Card (vCard)</option>
+        <option value="email">Email Message</option>
+      </select>
     </div>
 
-    <div class="flex items-center gap-3">
-      <button onclick="toggleFullscreen()" class="px-3 py-1.5 rounded-xl bg-gray-800/80 hover:bg-gray-700 text-xs font-semibold text-gray-200 border border-gray-700 backdrop-blur transition flex items-center gap-1.5">
-        <i class="fa-solid fa-expand"></i> Fullscreen
-      </button>
-      <button onclick="window.close()" class="px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-xs font-semibold text-red-300 border border-red-500/30 transition flex items-center gap-1.5">
-        <i class="fa-solid fa-xmark"></i> Close
-      </button>
+    <div id="dynamicInputs">
+      <!-- Injected via JS -->
+    </div>
+
+    <h2>2. Styles & Colors</h2>
+    <div class="grid-2">
+      <div class="form-group">
+        <label for="dotsStyle">Pattern Style</label>
+        <select id="dotsStyle">
+          <option value="rounded" selected>Rounded</option>
+          <option value="dots">Dots</option>
+          <option value="square">Square</option>
+          <option value="extra-rounded">Extra Rounded</option>
+          <option value="classy">Classy</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="cornerSquareStyle">Corner Frame</label>
+        <select id="cornerSquareStyle">
+          <option value="extra-rounded" selected>Extra Rounded</option>
+          <option value="square">Square</option>
+          <option value="dot">Dot</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-group">
+        <label for="fgColor">Foreground</label>
+        <div class="color-picker">
+          <input type="color" id="fgColor" value="#1e293b">
+          <span id="fgColorVal">#1e293b</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="bgColor">Background</label>
+        <div class="color-picker">
+          <input type="color" id="bgColor" value="#ffffff">
+          <span id="bgColorVal">#ffffff</span>
+        </div>
+      </div>
+    </div>
+
+    <h2>3. Center Logo</h2>
+    <div class="form-group">
+      <label for="logoFile">Upload Logo Image</label>
+      <input type="file" id="logoFile" accept="image/*">
+    </div>
+
+    <h2>4. Labels & Text</h2>
+    <div class="grid-2">
+      <div class="form-group">
+        <label for="cardBadgeInput">Header Badge</label>
+        <input type="text" id="cardBadgeInput" value="SCAN ME">
+      </div>
+      <div class="form-group">
+        <label for="cardTitleInput">Title</label>
+        <input type="text" id="cardTitleInput" value="Connect Quickly">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="cardSubtitleInput">Subtitle</label>
+      <input type="text" id="cardSubtitleInput" value="Scan with camera app">
+    </div>
+    <div class="form-group">
+      <label for="cardDescInput">Description Under Code</label>
+      <input type="text" id="cardDescInput" value="Point camera at code to open">
+    </div>
+
+    <h2>5. Presenter Screen Settings</h2>
+    <div class="toggle-row">
+      <span class="toggle-label">Enable Presenter Animations</span>
+      <label class="theme-switch">
+        <input type="checkbox" id="animToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">Multi-Code Presenter (Up to 4)</span>
+      <label class="theme-switch">
+        <input type="checkbox" id="multiToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- Multi QR Drawer -->
+    <div class="drawer" id="multiDrawer">
+      <label style="margin-bottom:8px;">Additional QR Codes Configuration</label>
+      <div class="form-group">
+        <label for="multi2">Code 2 Title & URL</label>
+        <input type="text" id="multi2" placeholder="e.g. Wi-Fi Access | WIFI:S:MyWifi;P:1234;;">
+      </div>
+      <div class="form-group">
+        <label for="multi3">Code 3 Title & URL</label>
+        <input type="text" id="multi3" placeholder="e.g. Menu | https://example.com/menu">
+      </div>
+      <div class="form-group">
+        <label for="multi4">Code 4 Title & URL</label>
+        <input type="text" id="multi4" placeholder="e.g. Feedback | https://example.com/review">
+      </div>
     </div>
   </div>
 
-  <!-- Central Presentation Canvas -->
-  <main class="relative z-10 flex-1 flex items-center justify-center py-12">
-    <div class="neon-card-wrapper max-w-md w-full p-8 text-center flex flex-col items-center">
+  <!-- Preview & Actions -->
+  <div class="preview-sticky">
+    <div class="qr-card" id="exportCard">
+      <div class="badge-cta" id="cardBadgeDisplay">SCAN ME</div>
+      <div class="card-title" id="cardTitleDisplay">Connect Quickly</div>
+      <div class="card-subtitle" id="cardSubtitleDisplay">Scan with camera app</div>
       
-      <!-- Animated Badge -->
-      <span class="px-4 py-1 rounded-full text-xs font-extrabold uppercase tracking-widest bg-blue-500/20 text-blue-300 border border-blue-500/40 mb-4 shadow-lg shadow-blue-500/20">
-        ${badge}
-      </span>
-
-      <!-- Animated Title & Subtitle -->
-      <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-1 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-gray-300">
-        ${title}
-      </h1>
-      <p class="text-xs sm:text-sm text-gray-400 mb-6 font-medium">
-        ${subtitle}
-      </p>
-
-      <!-- Scannable Code Display Box -->
-      <div class="scannable-qr-box my-2 flex items-center justify-center transform transition duration-300 hover:scale-105">
-        <img src="${qrDataUrl}" alt="Scannable QR Code" class="w-64 h-64 object-contain">
+      <div class="qr-wrapper">
+        <div id="qrCanvas"></div>
       </div>
-
-      <!-- Footer Note -->
-      <p class="text-xs text-gray-400 mt-6 font-medium flex items-center gap-2">
-        <i class="fa-solid fa-camera text-blue-400"></i> ${footerNote}
-      </p>
-    </div>
-  </main>
-
-  <!-- Footer -->
-  <footer class="relative z-20 text-center text-[11px] text-gray-500">
-    &copy; 2026 All rights reserved | Developer: DHStackWorks (dinethhesara20@gmail.com)
-  </footer>
-
-  <script>
-    function toggleFullscreen() {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(err => {
-          console.log(err);
-        });
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        }
-      }
-    }
-  <\/script>
-</body>
-</html>
-        `;
-
-        presentationWin.document.open();
-        presentationWin.document.write(presentationHtml);
-        presentationWin.document.close();
-      });
-
-
-      // --- 8. EXPORT & DOWNLOAD HANDLERS ---
       
-      // Toast notification display helper
-      function showToast(message) {
-        const toast = document.getElementById('toast');
-        const msg = document.getElementById('toastMsg');
-        msg.textContent = message;
-        toast.classList.remove('translate-y-12', 'opacity-0');
-        toast.classList.add('translate-y-0', 'opacity-100');
+      <div class="card-desc" id="cardDescDisplay">Point camera at code to open</div>
 
-        setTimeout(() => {
-          toast.classList.add('translate-y-12', 'opacity-0');
-          toast.classList.remove('translate-y-0', 'opacity-100');
-        }, 3000);
+      <!-- Dropdown Guide with Alignment Fixes -->
+      <div class="guide-accordion">
+        <div class="guide-header" onclick="toggleGuide()">
+          <span>📱 How to scan this QR code</span>
+          <span id="guideArrow">▼</span>
+        </div>
+        <div class="guide-content" id="guideContent">
+          <div class="guide-step">
+            <div class="guide-step-num">1</div>
+            <div class="guide-step-text">Open your phone's default Camera app or QR Scanner.</div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">2</div>
+            <div class="guide-step-text">Point camera steadily at the QR pattern.</div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">3</div>
+            <div class="guide-step-text">Tap the notification banner or popup link that appears.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-grid">
+      <button class="btn btn-primary" onclick="exportPNG()">💾 Export PNG</button>
+      <button class="btn btn-secondary" onclick="exportPDF()">📄 Export PDF</button>
+      <button class="btn btn-presenter" onclick="launchPresenter()">📺 Launch Presentation Screen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Presenter Screen Modal -->
+<div class="presenter-modal" id="presenterModal">
+  <div class="presenter-nav">
+    <div class="brand">
+      <div class="brand-icon">QR</div>
+      <span>QR Studio Presenter Mode</span>
+    </div>
+    <button class="presenter-close" onclick="closePresenter()">✕ Close Presentation</button>
+  </div>
+  <div class="presenter-body">
+    <div class="presenter-grid" id="presenterGrid">
+      <!-- Dynamic QR Cards Injected Here -->
+    </div>
+  </div>
+</div>
+
+<footer>
+  © 2026 All rights reserved | Developer: DHStackWorks (dinethhesara20@gmail.com)
+</footer>
+
+<script>
+  let logoDataUrl = "";
+  
+  // Initialize QR Generator
+  const qrCode = new QRCodeStyling({
+    width: 230,
+    height: 230,
+    type: "canvas",
+    data: "https://example.com",
+    dotsOptions: { color: "#1e293b", type: "rounded" },
+    backgroundOptions: { color: "#ffffff" },
+    cornersSquareOptions: { color: "#1e293b", type: "extra-rounded" },
+    cornersDotOptions: { color: "#1e293b", type: "dot" },
+    imageOptions: { crossOrigin: "anonymous", margin: 4, imageSize: 0.25 }
+  });
+
+  qrCode.append(document.getElementById("qrCanvas"));
+
+  // Input Type Renderer
+  const dataType = document.getElementById("dataType");
+  const dynamicInputs = document.getElementById("dynamicInputs");
+
+  function renderInputs() {
+    const val = dataType.value;
+    if (val === 'link' || val === 'text') {
+      dynamicInputs.innerHTML = `
+        <div class="form-group">
+          <label for="dataVal">${val === 'link' ? 'Website URL' : 'Plain Text'}</label>
+          <input type="text" id="dataVal" value="https://example.com">
+        </div>`;
+    } else if (val === 'wifi') {
+      dynamicInputs.innerHTML = `
+        <div class="form-group"><label>Network Name (SSID)</label><input type="text" id="wifiSsid" value="MyHomeWiFi"></div>
+        <div class="form-group"><label>Password</label><input type="password" id="wifiPass" value="Secret123"></div>`;
+    } else if (val === 'vcard') {
+      dynamicInputs.innerHTML = `
+        <div class="form-group"><label>Full Name</label><input type="text" id="vcName" value="John Doe"></div>
+        <div class="form-group"><label>Phone Number</label><input type="text" id="vcPhone" value="+1234567890"></div>`;
+    } else if (val === 'email') {
+      dynamicInputs.innerHTML = `
+        <div class="form-group"><label>Recipient Email</label><input type="email" id="mailTo" value="contact@example.com"></div>`;
+    }
+    bindInputEvents();
+    updateQR();
+  }
+
+  function bindInputEvents() {
+    const inputs = dynamicInputs.querySelectorAll("input");
+    inputs.forEach(i => i.addEventListener("input", updateQR));
+  }
+
+  dataType.addEventListener("change", renderInputs);
+  renderInputs();
+
+  function constructPayload() {
+    const val = dataType.value;
+    if (val === 'link' || val === 'text') return document.getElementById("dataVal")?.value || "https://example.com";
+    if (val === 'wifi') return `WIFI:S:${document.getElementById("wifiSsid")?.value};P:${document.getElementById("wifiPass")?.value};;`;
+    if (val === 'vcard') return `BEGIN:VCARD\nVERSION:3.0\nN:${document.getElementById("vcName")?.value}\nTEL:${document.getElementById("vcPhone")?.value}\nEND:VCARD`;
+    if (val === 'email') return `mailto:${document.getElementById("mailTo")?.value}`;
+    return "https://example.com";
+  }
+
+  function updateQR() {
+    qrCode.update({
+      data: constructPayload(),
+      image: logoDataUrl,
+      dotsOptions: {
+        color: document.getElementById("fgColor").value,
+        type: document.getElementById("dotsStyle").value
+      },
+      backgroundOptions: { color: document.getElementById("bgColor").value },
+      cornersSquareOptions: {
+        color: document.getElementById("fgColor").value,
+        type: document.getElementById("cornerSquareStyle").value
       }
-
-      // EXPORT PNG CARD (Excludes guide accordion silently)
-      document.getElementById('btnDownloadCard').addEventListener('click', async () => {
-        const card = document.getElementById('qrCardPreview');
-        const guide = document.getElementById('guideAccordion');
-
-        // Hide scanning guide dropdown during PNG capture
-        guide.style.display = 'none';
-
-        try {
-          const canvas = await html2canvas(card, {
-            scale: 4, // High definition render silently in backend
-            useCORS: true,
-            backgroundColor: null
-          });
-
-          const link = document.createElement('a');
-          link.download = 'QR-Studio-Card.png';
-          link.href = canvas.toDataURL('image/png');
-          link.click();
-          showToast('Exported card as PNG');
-        } catch (err) {
-          showToast('Failed to export PNG');
-        } finally {
-          guide.style.display = 'block';
-        }
-      });
-
-      // DOWNLOAD PURE QR ONLY
-      document.getElementById('btnDownloadPureQr').addEventListener('click', () => {
-        qrCode.download({
-          name: 'QR-Code',
-          extension: 'png'
-        });
-        showToast('Downloaded pure QR graphic');
-      });
-
-      // EXPORT PDF (Expands guide accordion for printable PDF document)
-      document.getElementById('btnDownloadPdf').addEventListener('click', async () => {
-        const card = document.getElementById('qrCardPreview');
-        const guideContent = document.getElementById('guideContent');
-        const guideWasHidden = guideContent.classList.contains('hidden');
-
-        // Force expand scanning guide for PDF document export
-        guideContent.classList.remove('hidden');
-
-        try {
-          const canvas = await html2canvas(card, {
-            scale: 3,
-            useCORS: true
-          });
-
-          const imgData = canvas.toDataURL('image/png');
-          const { jsPDF } = window.jspdf;
-          const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4'
-          });
-
-          const pdfWidth = pdf.internal.pageSize.getWidth();
-          const imgProps = pdf.getImageProperties(imgData);
-          const imgWidth = 120; // Centered size in mm
-          const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-          const x = (pdfWidth - imgWidth) / 2;
-
-          pdf.addImage(imgData, 'PNG', x, 30, imgWidth, imgHeight);
-          pdf.save('QR-Studio-Document.pdf');
-
-          showToast('PDF Document generated');
-        } catch (err) {
-          showToast('Failed to export PDF');
-        } finally {
-          if (guideWasHidden) {
-            guideContent.classList.add('hidden');
-          }
-        }
-      });
-
-      // COPY IMAGE TO CLIPBOARD
-      document.getElementById('btnCopyImage').addEventListener('click', async () => {
-        const canvas = qrContainer.querySelector('canvas');
-        if (!canvas) {
-          showToast('No image available to copy');
-          return;
-        }
-
-        try {
-          canvas.toBlob(async (blob) => {
-            if (!blob) {
-              showToast('Clipboard copy not supported on this device');
-              return;
-            }
-            try {
-              const item = new ClipboardItem({ 'image/png': blob });
-              await navigator.clipboard.write([item]);
-              showToast('Image copied to clipboard!');
-            } catch (e) {
-              showToast('Clipboard access restricted');
-            }
-          });
-        } catch (err) {
-          showToast('Failed to copy image');
-        }
-      });
-
-      // Initial First Render Call
-      updateQrCode();
     });
-  </script>
+  }
+
+  // Theme Logic
+  const themeToggle = document.getElementById("themeToggle");
+  function applySystemTheme() {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    themeToggle.checked = prefersDark;
+  }
+  applySystemTheme();
+
+  themeToggle.addEventListener("change", (e) => {
+    document.documentElement.setAttribute('data-theme', e.target.checked ? 'dark' : 'light');
+  });
+
+  // Color & Input Bindings
+  document.getElementById("fgColor").addEventListener("input", (e) => {
+    document.getElementById("fgColorVal").innerText = e.target.value;
+    updateQR();
+  });
+  document.getElementById("bgColor").addEventListener("input", (e) => {
+    document.getElementById("bgColorVal").innerText = e.target.value;
+    updateQR();
+  });
+  document.getElementById("dotsStyle").addEventListener("change", updateQR);
+  document.getElementById("cornerSquareStyle").addEventListener("change", updateQR);
+
+  // Logo File
+  document.getElementById("logoFile").addEventListener("change", function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (evt) => { logoDataUrl = evt.target.result; updateQR(); };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Label Bindings
+  document.getElementById("cardBadgeInput").addEventListener("input", e => document.getElementById("cardBadgeDisplay").innerText = e.target.value);
+  document.getElementById("cardTitleInput").addEventListener("input", e => document.getElementById("cardTitleDisplay").innerText = e.target.value);
+  document.getElementById("cardSubtitleInput").addEventListener("input", e => document.getElementById("cardSubtitleDisplay").innerText = e.target.value);
+  document.getElementById("cardDescInput").addEventListener("input", e => document.getElementById("cardDescDisplay").innerText = e.target.value);
+
+  // Drawer Toggle
+  document.getElementById("multiToggle").addEventListener("change", (e) => {
+    document.getElementById("multiDrawer").classList.toggle("active", e.target.checked);
+  });
+
+  // Guide Toggle
+  function toggleGuide() {
+    document.getElementById("guideContent").classList.toggle("open");
+  }
+
+  // Exports
+  function exportPNG() {
+    const card = document.getElementById("exportCard");
+    const guide = card.querySelector(".guide-accordion");
+    guide.style.display = "none"; // Hide scanning guide on PNG export
+    
+    html2canvas(card, { scale: 3, useCORS: true }).then(canvas => {
+      const link = document.createElement("a");
+      link.download = "qr-code.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      guide.style.display = "block"; // Restore
+    });
+  }
+
+  function exportPDF() {
+    const card = document.getElementById("exportCard");
+    const guideContent = document.getElementById("guideContent");
+    guideContent.classList.add("open"); // Force open step guide for PDF document
+
+    html2canvas(card, { scale: 3, useCORS: true }).then(canvas => {
+      const imgData = canvas.toDataURL("image/png");
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const cardWidth = 130;
+      const cardHeight = (canvas.height * cardWidth) / canvas.width;
+      
+      pdf.addImage(imgData, "PNG", (pdfWidth - cardWidth) / 2, 25, cardWidth, cardHeight);
+      pdf.save("qr-document.pdf");
+    });
+  }
+
+  // Presenter Launch
+  function launchPresenter() {
+    const isAnimated = document.getElementById("animToggle").checked;
+    const isMulti = document.getElementById("multiToggle").checked;
+    const grid = document.getElementById("presenterGrid");
+    grid.innerHTML = "";
+
+    const items = [
+      {
+        title: document.getElementById("cardTitleDisplay").innerText,
+        sub: document.getElementById("cardSubtitleDisplay").innerText,
+        data: constructPayload()
+      }
+    ];
+
+    if (isMulti) {
+      ['multi2', 'multi3', 'multi4'].forEach((id, idx) => {
+        const raw = document.getElementById(id).value.trim();
+        if (raw) {
+          const parts = raw.split('|');
+          items.push({
+            title: parts[0] || `Code ${idx + 2}`,
+            sub: "Scan to open",
+            data: parts[1] ? parts[1].trim() : parts[0].trim()
+          });
+        }
+      });
+    }
+
+    items.forEach((item, index) => {
+      const cardEl = document.createElement("div");
+      cardEl.className = `presenter-card ${isAnimated ? 'animated' : ''}`;
+      
+      const qrId = `presQr_${index}`;
+      cardEl.innerHTML = `
+        <div style="font-size:1.2rem; font-weight:700; margin-bottom:4px; color:#fff;">${item.title}</div>
+        <div style="font-size:0.85rem; color:#94a3b8; margin-bottom:12px;">${item.sub}</div>
+        <div style="background:#fff; padding:12px; border-radius:12px;" id="${qrId}"></div>
+        <div class="presenter-steps">
+          <div class="presenter-step-item"><span>1. Open Camera</span></div>
+          <span class="presenter-arrow">➔</span>
+          <div class="presenter-step-item"><span>2. Point at QR</span></div>
+          <span class="presenter-arrow">➔</span>
+          <div class="presenter-step-item"><span>3. Tap Link</span></div>
+        </div>
+      `;
+      grid.appendChild(cardEl);
+
+      setTimeout(() => {
+        const presQr = new QRCodeStyling({
+          width: 200,
+          height: 200,
+          type: "canvas",
+          data: item.data,
+          dotsOptions: { color: "#0f172a", type: document.getElementById("dotsStyle").value },
+          backgroundOptions: { color: "#ffffff" },
+          cornersSquareOptions: { color: "#0f172a", type: document.getElementById("cornerSquareStyle").value }
+        });
+        presQr.append(document.getElementById(qrId));
+      }, 50);
+    });
+
+    document.getElementById("presenterModal").classList.add("active");
+  }
+
+  function closePresenter() {
+    document.getElementById("presenterModal").classList.remove("active");
+  }
+</script>
 </body>
 </html>
