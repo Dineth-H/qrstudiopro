@@ -1,626 +1,1108 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" class="h-full">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QR Studio Pro</title>
-  <!-- Third-party CDN Dependencies -->
+  <title>QR Code Studio</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#f0f7ff', 100: '#e0effe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <style>
-    :root[data-theme="light"] {
-      --bg-main: #f1f5f9;
-      --bg-card: #ffffff;
-      --bg-input: #f8fafc;
-      --text-main: #0f172a;
-      --text-muted: #64748b;
-      --border-color: #cbd5e1;
-      --primary: #3b82f6;
-      --primary-hover: #2563eb;
-      --card-inner: #f8fafc;
-      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 9999px; }
+    .dark ::-webkit-scrollbar-thumb { background: rgba(75, 85, 99, 0.5); }
+
+    /* Shared field styles so every control has identical geometry */
+    .field {
+      width: 100%; padding: 0.5rem 0.75rem; font-size: 0.8125rem; line-height: 1.25rem;
+      border-radius: 0.75rem; border: 1px solid #d1d5db; background: #f9fafb; outline: none;
+      transition: box-shadow .15s, border-color .15s;
     }
+    .field:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,.35); }
+    .dark .field { background: rgba(31,41,55,.8); border-color: #374151; color: #f3f4f6; }
+    .field-sm { padding: 0.375rem 0.625rem; font-size: 0.75rem; border-radius: 0.5rem; }
+    .lbl { display: block; font-size: 0.6875rem; font-weight: 600; color: #6b7280; margin-bottom: 0.25rem; }
+    .dark .lbl { color: #9ca3af; }
+    .swatch { width: 2rem; height: 2rem; border-radius: 0.5rem; border: 0; background: transparent; cursor: pointer; padding: 0; }
+    .swatch::-webkit-color-swatch-wrapper { padding: 2px; }
+    .swatch::-webkit-color-swatch { border-radius: 0.4rem; border: 1px solid rgba(0,0,0,.15); }
+    .chip { display: inline-flex; align-items: center; gap: .35rem; font-size: .6875rem; font-weight: 600; padding: .2rem .55rem; border-radius: 9999px; }
 
-    :root[data-theme="dark"] {
-      --bg-main: #0b0f19;
-      --bg-card: #151c2c;
-      --bg-input: #1e293b;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --border-color: #334155;
-      --primary: #3b82f6;
-      --primary-hover: #60a5fa;
-      --card-inner: #0f172a;
-      --shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
+    /* Presenter settings tabs */
+    .ptab { padding: .45rem .75rem; font-size: .75rem; font-weight: 600; border-radius: .6rem; color: #6b7280; transition: all .15s; white-space: nowrap; }
+    .dark .ptab { color: #9ca3af; }
+    .ptab:hover { background: #f3f4f6; }
+    .dark .ptab:hover { background: #1f2937; }
+    .ptab.active { background: #eff6ff; color: #2563eb; }
+    .dark .ptab.active { background: rgba(30,58,138,.4); color: #93c5fd; }
+
+    /* Step badges: 16px badge sits on a 20px first text line */
+    .guide-step { display: flex; align-items: flex-start; gap: .5rem; line-height: 1.25rem; }
+    .guide-step .badge {
+      flex: 0 0 1rem; width: 1rem; height: 1rem; margin-top: 2px; border-radius: 9999px;
+      display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; line-height: 1;
     }
+    .guide-step .txt { line-height: 1.25rem; }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg-main); color: var(--text-main); padding: 20px 16px 40px; min-height: 100vh; transition: background-color 0.3s, color 0.3s; }
-    
-    .header-bar { max-width: 1150px; margin: 0 auto 20px; display: flex; justify-content: space-between; align-items: center; }
-    .brand { display: flex; align-items: center; gap: 10px; font-size: 1.3rem; font-weight: 800; color: var(--text-main); }
-    .brand-icon { width: 32px; height: 32px; background: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; }
-    
-    /* Theme Toggle Switch */
-    .theme-switch-wrapper { display: flex; align-items: center; gap: 8px; }
-    .theme-switch { position: relative; display: inline-block; width: 48px; height: 26px; }
-    .theme-switch input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .3s; border-radius: 34px; }
-    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .3s; border-radius: 50%; }
-    input:checked + .slider { background-color: var(--primary); }
-    input:checked + .slider:before { transform: translateX(22px); }
-
-    .app-layout { max-width: 1150px; margin: 0 auto; display: grid; grid-template-columns: 1fr 420px; gap: 24px; }
-    @media (max-width: 960px) { .app-layout { grid-template-columns: 1fr; } }
-
-    .panel { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); }
-    h2 { font-size: 1.05rem; margin: 20px 0 12px; color: var(--text-main); display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
-    h2:first-of-type { margin-top: 0; }
-    
-    .form-group { margin-bottom: 14px; }
-    label { display: block; font-size: 0.825rem; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); }
-    input[type="text"], input[type="url"], input[type="email"], input[type="password"], textarea, select {
-      width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; outline: none; background: var(--bg-input); color: var(--text-main); transition: border-color 0.2s;
-    }
-    input:focus, textarea:focus, select:focus { border-color: var(--primary); }
-    
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .color-picker { display: flex; align-items: center; gap: 10px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 4px 8px; }
-    .color-picker input[type="color"] { width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; background: none; }
-    .color-picker span { font-size: 0.8rem; font-family: monospace; color: var(--text-muted); }
-
-    /* Drawer Styles */
-    .drawer { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-top: 10px; display: none; }
-    .drawer.active { display: block; }
-    
-    .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .toggle-label { font-size: 0.875rem; font-weight: 600; color: var(--text-main); }
-    
-    /* Live Preview Column */
-    .preview-sticky { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 16px; align-items: center; }
-    
-    .qr-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      padding: 24px;
-      width: 100%;
-      box-shadow: var(--shadow);
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    
-    .badge-cta {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 4px 16px;
-      border-radius: 9999px;
-      background: var(--primary);
-      color: #ffffff;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-      height: 24px;
-    }
-    
-    .card-title { font-size: 1.3rem; font-weight: 700; color: var(--text-main); line-height: 1.2; margin-bottom: 4px; text-align: center; }
-    .card-subtitle { font-size: 0.85rem; color: var(--text-muted); line-height: 1.3; margin-bottom: 16px; text-align: center; }
-    
-    .qr-wrapper {
-      background: #ffffff;
-      padding: 14px;
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-      margin-bottom: 14px;
-    }
-    
-    .card-desc { font-size: 0.825rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 16px; text-align: center; }
-
-    /* Dropdown Guide Alignment Fixes */
-    .guide-accordion { width: 100%; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; background: var(--bg-input); }
-    .guide-header { padding: 10px 14px; font-size: 0.825rem; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: var(--text-main); user-select: none; }
-    .guide-content { padding: 12px 14px; font-size: 0.8rem; color: var(--text-muted); display: none; border-top: 1px solid var(--border-color); background: var(--bg-card); text-align: left; }
-    .guide-content.open { display: block; }
-    
-    .guide-step { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
-    .guide-step:last-child { margin-bottom: 0; }
-    .guide-step-num {
-      width: 20px;
-      height: 20px;
-      min-width: 20px;
-      border-radius: 50%;
-      background: var(--primary);
-      color: #ffffff;
-      font-size: 0.7rem;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: 1px; /* Vertical alignment fix with text */
-    }
-    .guide-step-text { font-size: 0.8rem; line-height: 1.35; flex: 1; color: var(--text-muted); }
-
-    /* Button Group */
-    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
-    .btn { padding: 11px 14px; border: none; border-radius: 10px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover { background: var(--primary-hover); }
-    .btn-secondary { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); }
-    .btn-secondary:hover { background: var(--border-color); }
-    .btn-presenter { grid-column: span 2; background: #8b5cf6; color: #fff; }
-    .btn-presenter:hover { background: #7c3aed; }
-
-    /* Presenter Overlay Screen */
-    .presenter-modal {
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: #090d16; color: #ffffff; z-index: 99999; display: none;
-      flex-direction: column; padding: 30px; overflow-y: auto; box-sizing: border-box;
-    }
-    .presenter-modal.active { display: flex; }
-    .presenter-nav { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px; }
-    .presenter-close { background: #1e293b; border: 1px solid #334155; color: #fff; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
-    
-    .presenter-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; max-width: 1200px; margin: 0 auto; }
-    .presenter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; width: 100%; justify-content: center; align-items: center; }
-    
-    .presenter-card {
-      background: #111827; border: 1px solid #1f293d; border-radius: 20px; padding: 24px;
-      display: flex; flex-direction: column; align-items: center; text-align: center; position: relative;
-    }
-    .presenter-card.animated { animation: floatPulse 4s ease-in-out infinite alternate; box-shadow: 0 0 30px rgba(59, 130, 246, 0.2); }
-    
-    /* Animated Step-by-Step Arrow Flow */
-    .presenter-steps { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
-    .presenter-step-item { background: #1e293b; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; color: #94a3b8; display: flex; align-items: center; gap: 6px; }
-    .presenter-arrow { color: var(--primary); font-weight: bold; }
-    .presenter-card.animated .presenter-arrow { animation: arrowGlow 1.5s infinite; }
-
-    @keyframes floatPulse { 0% { transform: translateY(0); } 100% { transform: translateY(-8px); box-shadow: 0 0 45px rgba(59, 130, 246, 0.4); } }
-    @keyframes arrowGlow { 0%, 100% { opacity: 0.3; transform: translateX(0); } 50% { opacity: 1; transform: translateX(3px); } }
-
-    /* Footer */
-    footer { text-align: center; margin-top: 40px; font-size: 0.8rem; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 20px; }
+    /* Export-safe tweaks applied only to the html2canvas clone */
+    .export-safe i { line-height: 1 !important; vertical-align: middle; }
+    .export-safe .badge { line-height: 1 !important; }
+    .export-safe #cardBadge { line-height: 1.1 !important; padding-top: 5px !important; padding-bottom: 5px !important; }
   </style>
 </head>
-<body>
 
-<div class="header-bar">
-  <div class="brand">
-    <div class="brand-icon">QR</div>
-    <span>QR Studio Pro</span>
-  </div>
-  <div class="theme-switch-wrapper">
-    <span style="font-size:0.8rem; color:var(--text-muted);">Dark Mode</span>
-    <label class="theme-switch">
-      <input type="checkbox" id="themeToggle" checked>
-      <span class="slider"></span>
-    </label>
-  </div>
-</div>
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300 min-h-screen flex flex-col">
 
-<div class="app-layout">
-  <!-- Controls Panel -->
-  <div class="panel">
-    <h2>1. Data & Content</h2>
-    <div class="form-group">
-      <label for="dataType">Content Type</label>
-      <select id="dataType">
-        <option value="link">Website Link</option>
-        <option value="text">Plain Text</option>
-        <option value="wifi">Wi-Fi Network</option>
-        <option value="vcard">Contact Card (vCard)</option>
-        <option value="email">Email Message</option>
-      </select>
-    </div>
-
-    <div id="dynamicInputs">
-      <!-- Injected via JS -->
-    </div>
-
-    <h2>2. Styles & Colors</h2>
-    <div class="grid-2">
-      <div class="form-group">
-        <label for="dotsStyle">Pattern Style</label>
-        <select id="dotsStyle">
-          <option value="rounded" selected>Rounded</option>
-          <option value="dots">Dots</option>
-          <option value="square">Square</option>
-          <option value="extra-rounded">Extra Rounded</option>
-          <option value="classy">Classy</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="cornerSquareStyle">Corner Frame</label>
-        <select id="cornerSquareStyle">
-          <option value="extra-rounded" selected>Extra Rounded</option>
-          <option value="square">Square</option>
-          <option value="dot">Dot</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <div class="form-group">
-        <label for="fgColor">Foreground</label>
-        <div class="color-picker">
-          <input type="color" id="fgColor" value="#1e293b">
-          <span id="fgColorVal">#1e293b</span>
+  <!-- HEADER -->
+  <header class="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-colors">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+          <i class="fa-solid fa-qrcode text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-gray-900 dark:text-white leading-none">QR Code Studio</h1>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Generator, Visual Designer &amp; Presenter</p>
         </div>
       </div>
-      <div class="form-group">
-        <label for="bgColor">Background</label>
-        <div class="color-picker">
-          <input type="color" id="bgColor" value="#ffffff">
-          <span id="bgColorVal">#ffffff</span>
-        </div>
+
+      <div class="flex items-center gap-3">
+        <span class="text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+          <i class="fa-solid fa-sun text-amber-500 hidden dark:inline"></i>
+          <i class="fa-solid fa-moon text-indigo-400 inline dark:hidden"></i>
+          <span class="hidden sm:inline">Theme</span>
+        </span>
+        <label for="themeToggle" class="relative inline-flex items-center cursor-pointer select-none">
+          <input type="checkbox" id="themeToggle" class="sr-only peer">
+          <div class="w-11 h-6 bg-gray-300 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+        </label>
       </div>
     </div>
+  </header>
 
-    <h2>3. Center Logo</h2>
-    <div class="form-group">
-      <label for="logoFile">Upload Logo Image</label>
-      <input type="file" id="logoFile" accept="image/*">
-    </div>
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-    <h2>4. Labels & Text</h2>
-    <div class="grid-2">
-      <div class="form-group">
-        <label for="cardBadgeInput">Header Badge</label>
-        <input type="text" id="cardBadgeInput" value="SCAN ME">
-      </div>
-      <div class="form-group">
-        <label for="cardTitleInput">Title</label>
-        <input type="text" id="cardTitleInput" value="Connect Quickly">
-      </div>
-    </div>
-    <div class="form-group">
-      <label for="cardSubtitleInput">Subtitle</label>
-      <input type="text" id="cardSubtitleInput" value="Scan with camera app">
-    </div>
-    <div class="form-group">
-      <label for="cardDescInput">Description Under Code</label>
-      <input type="text" id="cardDescInput" value="Point camera at code to open">
-    </div>
+      <!-- LEFT COLUMN -->
+      <div class="lg:col-span-7 space-y-6">
 
-    <h2>5. Presenter Screen Settings</h2>
-    <div class="toggle-row">
-      <span class="toggle-label">Enable Presenter Animations</span>
-      <label class="theme-switch">
-        <input type="checkbox" id="animToggle">
-        <span class="slider"></span>
-      </label>
-    </div>
+        <!-- 1. DATA TYPE -->
+        <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800 shadow-sm">
+          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-layer-group text-blue-500"></i> Select Data Type
+          </h2>
 
-    <div class="toggle-row">
-      <span class="toggle-label">Multi-Code Presenter (Up to 4)</span>
-      <label class="theme-switch">
-        <input type="checkbox" id="multiToggle">
-        <span class="slider"></span>
-      </label>
-    </div>
-
-    <!-- Multi QR Drawer -->
-    <div class="drawer" id="multiDrawer">
-      <label style="margin-bottom:8px;">Additional QR Codes Configuration</label>
-      <div class="form-group">
-        <label for="multi2">Code 2 Title & URL</label>
-        <input type="text" id="multi2" placeholder="e.g. Wi-Fi Access | WIFI:S:MyWifi;P:1234;;">
-      </div>
-      <div class="form-group">
-        <label for="multi3">Code 3 Title & URL</label>
-        <input type="text" id="multi3" placeholder="e.g. Menu | https://example.com/menu">
-      </div>
-      <div class="form-group">
-        <label for="multi4">Code 4 Title & URL</label>
-        <input type="text" id="multi4" placeholder="e.g. Feedback | https://example.com/review">
-      </div>
-    </div>
-  </div>
-
-  <!-- Preview & Actions -->
-  <div class="preview-sticky">
-    <div class="qr-card" id="exportCard">
-      <div class="badge-cta" id="cardBadgeDisplay">SCAN ME</div>
-      <div class="card-title" id="cardTitleDisplay">Connect Quickly</div>
-      <div class="card-subtitle" id="cardSubtitleDisplay">Scan with camera app</div>
-      
-      <div class="qr-wrapper">
-        <div id="qrCanvas"></div>
-      </div>
-      
-      <div class="card-desc" id="cardDescDisplay">Point camera at code to open</div>
-
-      <!-- Dropdown Guide with Alignment Fixes -->
-      <div class="guide-accordion">
-        <div class="guide-header" onclick="toggleGuide()">
-          <span>📱 How to scan this QR code</span>
-          <span id="guideArrow">▼</span>
-        </div>
-        <div class="guide-content" id="guideContent">
-          <div class="guide-step">
-            <div class="guide-step-num">1</div>
-            <div class="guide-step-text">Open your phone's default Camera app or QR Scanner.</div>
+          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2" id="dataTypeTabs">
+            <button data-type="url" class="tab-btn active p-2.5 rounded-xl border border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex flex-col items-center gap-1.5 transition-all"><i class="fa-solid fa-link text-lg"></i><span class="text-xs font-medium">Link</span></button>
+            <button data-type="text" class="tab-btn p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-gray-300 text-gray-600 dark:text-gray-400 flex flex-col items-center gap-1.5 transition-all"><i class="fa-solid fa-align-left text-lg"></i><span class="text-xs font-medium">Text</span></button>
+            <button data-type="wifi" class="tab-btn p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-gray-300 text-gray-600 dark:text-gray-400 flex flex-col items-center gap-1.5 transition-all"><i class="fa-solid fa-wifi text-lg"></i><span class="text-xs font-medium">Wi-Fi</span></button>
+            <button data-type="vcard" class="tab-btn p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-gray-300 text-gray-600 dark:text-gray-400 flex flex-col items-center gap-1.5 transition-all"><i class="fa-solid fa-address-card text-lg"></i><span class="text-xs font-medium">Contact</span></button>
+            <button data-type="email" class="tab-btn p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-gray-300 text-gray-600 dark:text-gray-400 flex flex-col items-center gap-1.5 transition-all"><i class="fa-solid fa-envelope text-lg"></i><span class="text-xs font-medium">Email</span></button>
+            <button data-type="sms" class="tab-btn p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-gray-300 text-gray-600 dark:text-gray-400 flex flex-col items-center gap-1.5 transition-all"><i class="fa-solid fa-comment-dots text-lg"></i><span class="text-xs font-medium">Message</span></button>
+            <button data-type="file" class="tab-btn p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-gray-300 text-gray-600 dark:text-gray-400 flex flex-col items-center gap-1.5 transition-all"><i class="fa-solid fa-file-arrow-up text-lg"></i><span class="text-xs font-medium">File</span></button>
           </div>
-          <div class="guide-step">
-            <div class="guide-step-num">2</div>
-            <div class="guide-step-text">Point camera steadily at the QR pattern.</div>
-          </div>
-          <div class="guide-step">
-            <div class="guide-step-num">3</div>
-            <div class="guide-step-text">Tap the notification banner or popup link that appears.</div>
+
+          <div class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800/60" id="dynamicFormContainer">
+            <div id="form-url" class="type-form space-y-3">
+              <label class="lbl">Website URL</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fa-solid fa-globe"></i></span>
+                <input type="url" id="input-url" value="https://example.com" placeholder="https://yourwebsite.com" class="field pl-9">
+              </div>
+            </div>
+
+            <div id="form-text" class="type-form hidden space-y-3">
+              <label class="lbl">Plain Text</label>
+              <textarea id="input-text" rows="3" placeholder="Enter custom message or plain text..." class="field">Welcome to our platform!</textarea>
+            </div>
+
+            <div id="form-wifi" class="type-form hidden space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label class="lbl">Network Name (SSID)</label><input type="text" id="wifi-ssid" placeholder="MyWiFiNetwork" class="field"></div>
+                <div><label class="lbl">Encryption</label>
+                  <select id="wifi-type" class="field"><option value="WPA">WPA/WPA2/WPA3</option><option value="WEP">WEP</option><option value="nopass">None (Open)</option></select>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                <div><label class="lbl">Password</label><input type="password" id="wifi-password" placeholder="Password" class="field"></div>
+                <label class="flex items-center gap-2 h-10 text-xs font-medium text-gray-600 dark:text-gray-300"><input type="checkbox" id="wifi-hidden" class="rounded text-blue-600 w-4 h-4"> Hidden Network</label>
+              </div>
+            </div>
+
+            <div id="form-vcard" class="type-form hidden space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input type="text" id="vcard-fn" placeholder="First Name" class="field">
+                <input type="text" id="vcard-ln" placeholder="Last Name" class="field">
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input type="tel" id="vcard-phone" placeholder="Phone (+1234567890)" class="field">
+                <input type="email" id="vcard-email" placeholder="Email Address" class="field">
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <input type="text" id="vcard-company" placeholder="Company" class="field">
+                <input type="text" id="vcard-title" placeholder="Job Title" class="field">
+                <input type="url" id="vcard-url" placeholder="Website" class="field">
+              </div>
+            </div>
+
+            <div id="form-email" class="type-form hidden space-y-3">
+              <input type="email" id="email-to" placeholder="Recipient (contact@domain.com)" class="field">
+              <input type="text" id="email-subject" placeholder="Email Subject" class="field">
+              <textarea id="email-body" rows="2" placeholder="Email Body message..." class="field"></textarea>
+            </div>
+
+            <div id="form-sms" class="type-form hidden space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div><label class="lbl">Service Platform</label>
+                  <select id="sms-mode" class="field"><option value="whatsapp">WhatsApp</option><option value="sms">SMS Message</option></select>
+                </div>
+                <div class="sm:col-span-2"><label class="lbl">Phone Number</label><input type="tel" id="sms-phone" placeholder="+1234567890" class="field"></div>
+              </div>
+              <textarea id="sms-message" rows="2" placeholder="Pre-filled message text..." class="field"></textarea>
+            </div>
+
+            <div id="form-file" class="type-form hidden space-y-3">
+              <label class="lbl">File Upload / Media URL</label>
+              <div class="p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl text-center hover:border-blue-500 transition cursor-pointer bg-gray-50/50 dark:bg-gray-800/30" id="fileDropZone">
+                <i class="fa-solid fa-cloud-arrow-up text-2xl text-blue-500 mb-1"></i>
+                <p class="text-xs font-medium text-gray-600 dark:text-gray-300">Click to upload or drag file here</p>
+                <p class="text-[10px] text-gray-400 mt-1">Converts small image / document to a data string</p>
+                <input type="file" id="file-input" class="hidden">
+              </div>
+              <span class="text-xs text-gray-400 block text-center">OR enter direct File URL</span>
+              <input type="url" id="file-url" placeholder="https://domain.com/document.pdf" class="field">
+            </div>
           </div>
         </div>
+
+        <!-- 2. STYLING -->
+        <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800 shadow-sm space-y-5">
+          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-palette text-indigo-500"></i> Styling &amp; Appearance
+          </h2>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="lbl">Pattern Style</label>
+              <select id="dotStyle" class="field">
+                <option value="square">Square</option><option value="dots">Dots</option><option value="rounded" selected>Rounded</option>
+                <option value="extra-rounded">Extra Rounded</option><option value="classy">Classy</option><option value="classy-rounded">Classy Rounded</option>
+              </select>
+            </div>
+            <div><label class="lbl">Error Correction</label>
+              <select id="ecLevel" class="field">
+                <option value="L">Low (7%)</option><option value="M">Medium (15%)</option><option value="Q">Quartile (25%)</option><option value="H" selected>High (30% - Best with Logo)</option>
+              </select>
+            </div>
+
+            <div class="space-y-2 md:col-span-2 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Pattern Color &amp; Gradient</span>
+                <label class="flex items-center gap-1.5 cursor-pointer text-xs"><input type="checkbox" id="enableGradient" class="rounded text-blue-600"><span class="text-gray-600 dark:text-gray-400">Gradient</span></label>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2"><input type="color" id="fgColor1" value="#1e3a8a" class="swatch"><span class="text-xs font-mono text-gray-500" id="fgColor1Val">#1e3a8a</span></div>
+                <div id="gradientColor2Group" class="hidden items-center gap-2">
+                  <span class="text-xs text-gray-400">&rarr;</span>
+                  <input type="color" id="fgColor2" value="#3b82f6" class="swatch"><span class="text-xs font-mono text-gray-500" id="fgColor2Val">#3b82f6</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-2 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Background</span>
+                <label class="flex items-center gap-1.5 cursor-pointer text-xs"><input type="checkbox" id="transparentBg" class="rounded text-blue-600"><span class="text-gray-600 dark:text-gray-400">Transparent</span></label>
+              </div>
+              <div class="flex items-center gap-2"><input type="color" id="bgColor" value="#ffffff" class="swatch"><span class="text-xs font-mono text-gray-500" id="bgColorVal">#ffffff</span></div>
+            </div>
+
+            <div class="space-y-2 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800">
+              <span class="text-xs font-medium text-gray-700 dark:text-gray-300 block">Corners Frame &amp; Eyeball</span>
+              <div class="grid grid-cols-2 gap-2 items-center">
+                <select id="cornerFrameStyle" class="field field-sm">
+                  <option value="square">Square Frame</option><option value="dot">Dot Frame</option><option value="extra-rounded" selected>Rounded Frame</option>
+                </select>
+                <div class="flex items-center gap-2"><input type="color" id="cornerFrameColor" value="#1e3a8a" class="swatch"><span class="text-[10px] font-mono text-gray-500" id="cornerFrameColorVal">#1e3a8a</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Logo -->
+          <div class="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-3">
+            <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
+              <span>Center Logo / Brand Icon</span>
+              <button id="clearLogoBtn" class="text-[11px] text-red-500 hover:underline hidden">Remove Logo</button>
+            </label>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs text-gray-400">Presets:</span>
+              <button class="preset-logo-btn p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs" data-icon="wifi"><i class="fa-solid fa-wifi text-blue-500"></i></button>
+              <button class="preset-logo-btn p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs" data-icon="globe"><i class="fa-solid fa-globe text-indigo-500"></i></button>
+              <button class="preset-logo-btn p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs" data-icon="whatsapp"><i class="fa-brands fa-whatsapp text-emerald-500"></i></button>
+              <button class="preset-logo-btn p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs" data-icon="instagram"><i class="fa-brands fa-instagram text-pink-500"></i></button>
+              <button class="preset-logo-btn p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs" data-icon="envelope"><i class="fa-solid fa-envelope text-amber-500"></i></button>
+              <button class="preset-logo-btn p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs" data-icon="heart"><i class="fa-solid fa-heart text-red-500"></i></button>
+              <button class="preset-logo-btn p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs" data-icon="star"><i class="fa-solid fa-star text-yellow-500"></i></button>
+              <label for="customLogoInput" class="cursor-pointer px-2 py-1 rounded-lg border border-dashed border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-xs font-medium flex items-center gap-1"><i class="fa-solid fa-upload"></i> Upload</label>
+              <input type="file" id="customLogoInput" accept="image/*" class="hidden">
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div>
+                <div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>Logo Size</span><span id="logoSizeVal">30%</span></div>
+                <input type="range" id="logoSize" min="0.1" max="0.4" step="0.02" value="0.3" class="w-full accent-blue-600">
+              </div>
+              <div>
+                <div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>Logo Margin</span><span id="logoMarginVal">6px</span></div>
+                <input type="range" id="logoMargin" min="0" max="20" step="1" value="6" class="w-full accent-blue-600">
+              </div>
+            </div>
+          </div>
+
+          <!-- Labels -->
+          <div class="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-3">
+            <h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300">Card Labels &amp; Annotations</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label class="lbl">Top Badge Label</label><input type="text" id="labelBadge" value="SCAN ME" placeholder="e.g., SCAN ME" class="field field-sm"></div>
+              <div><label class="lbl">Title</label><input type="text" id="labelTitle" value="Connect Quickly" placeholder="e.g., Guest Network" class="field field-sm"></div>
+              <div><label class="lbl">Subtitle</label><input type="text" id="labelSubtitle" value="Scan with camera app" placeholder="e.g., Instant Access" class="field field-sm"></div>
+              <div><label class="lbl">Footer Note</label><input type="text" id="labelFooter" value="Point camera at code to open" placeholder="e.g., Valid for all devices" class="field field-sm"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. PRESENTER SETTINGS -->
+        <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-wand-magic-sparkles text-purple-500"></i> Presenter Settings
+            </h2>
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <span class="text-xs font-medium text-gray-600 dark:text-gray-300">Presenter animations</span>
+              <span class="relative inline-flex items-center">
+                <input type="checkbox" id="p-anim" class="sr-only peer">
+                <span class="w-9 h-5 bg-gray-300 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600 block"></span>
+              </span>
+              <span id="p-animState" class="chip bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">OFF</span>
+            </label>
+          </div>
+
+          <div class="flex gap-1 overflow-x-auto pb-1 border-b border-gray-100 dark:border-gray-800" id="presenterTabs">
+            <button class="ptab active" data-ptab="ambience"><i class="fa-solid fa-sun mr-1.5"></i>Ambience</button>
+            <button class="ptab" data-ptab="card"><i class="fa-solid fa-id-card mr-1.5"></i>Card &amp; Text</button>
+            <button class="ptab" data-ptab="guide"><i class="fa-solid fa-list-ol mr-1.5"></i>Scan Guide</button>
+            <button class="ptab" data-ptab="multi"><i class="fa-solid fa-table-cells-large mr-1.5"></i>Multi-QR <span id="multiCountChip" class="ml-1 chip bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 !py-0">1</span></button>
+          </div>
+
+          <!-- AMBIENCE -->
+          <div id="ptab-ambience" class="ppanel space-y-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs text-gray-400">Presets:</span>
+              <button class="amb-preset px-2.5 py-1 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800" data-preset="midnight"><span class="inline-block w-2.5 h-2.5 rounded-full mr-1 align-middle" style="background:linear-gradient(45deg,#3b82f6,#8b5cf6)"></span>Midnight</button>
+              <button class="amb-preset px-2.5 py-1 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800" data-preset="aurora"><span class="inline-block w-2.5 h-2.5 rounded-full mr-1 align-middle" style="background:linear-gradient(45deg,#10b981,#06b6d4)"></span>Aurora</button>
+              <button class="amb-preset px-2.5 py-1 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800" data-preset="sunset"><span class="inline-block w-2.5 h-2.5 rounded-full mr-1 align-middle" style="background:linear-gradient(45deg,#f97316,#ec4899)"></span>Sunset</button>
+              <button class="amb-preset px-2.5 py-1 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800" data-preset="light"><span class="inline-block w-2.5 h-2.5 rounded-full mr-1 align-middle border border-gray-300" style="background:linear-gradient(45deg,#dbeafe,#ede9fe)"></span>Clean Light</button>
+              <button class="amb-preset px-2.5 py-1 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800" data-preset="mono"><span class="inline-block w-2.5 h-2.5 rounded-full mr-1 align-middle" style="background:linear-gradient(45deg,#000,#777)"></span>Mono</button>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div><label class="lbl">Background</label><div class="flex items-center gap-2"><input type="color" id="p-bg" value="#f3f4f6" class="swatch"><span class="text-[10px] font-mono text-gray-500" id="p-bgVal">#f3f4f6</span></div></div>
+              <div><label class="lbl">Orb 1</label><div class="flex items-center gap-2"><input type="color" id="p-orb1" value="#93c5fd" class="swatch"><span class="text-[10px] font-mono text-gray-500" id="p-orb1Val">#93c5fd</span></div></div>
+              <div><label class="lbl">Orb 2</label><div class="flex items-center gap-2"><input type="color" id="p-orb2" value="#c4b5fd" class="swatch"><span class="text-[10px] font-mono text-gray-500" id="p-orb2Val">#c4b5fd</span></div></div>
+              <div><label class="lbl">Font</label>
+                <select id="p-font" class="field field-sm">
+                  <option value="Plus Jakarta Sans">Plus Jakarta Sans</option><option value="Inter">Inter</option><option value="Poppins">Poppins</option><option value="Space Grotesk">Space Grotesk</option><option value="Sora">Sora</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div><div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>Orb Intensity</span><span id="p-orbOpVal">40%</span></div><input type="range" id="p-orbOp" min="0" max="1" step="0.05" value="0.5" class="w-full accent-purple-600"></div>
+              <div><div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>Orb Size</span><span id="p-orbSizeVal">420px</span></div><input type="range" id="p-orbSize" min="150" max="900" step="10" value="420" class="w-full accent-purple-600"></div>
+              <div><div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>Orb Blur</span><span id="p-orbBlurVal">100px</span></div><input type="range" id="p-orbBlur" min="20" max="220" step="5" value="100" class="w-full accent-purple-600"></div>
+            </div>
+
+            <div class="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800 space-y-3">
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Card Glow &amp; Neon Border</span>
+                <div class="flex items-center gap-4">
+                  <label class="flex items-center gap-1.5 cursor-pointer text-xs"><input type="checkbox" id="p-neon" checked class="rounded text-purple-600"><span class="text-gray-600 dark:text-gray-400">Neon border</span></label>
+                  <label class="flex items-center gap-1.5 cursor-pointer text-xs"><input type="checkbox" id="p-vignette" class="rounded text-purple-600"><span class="text-gray-600 dark:text-gray-400">Vignette</span></label>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 items-end">
+                <div><label class="lbl">Glow 1</label><div class="flex items-center gap-2"><input type="color" id="p-glow1" value="#60a5fa" class="swatch"><span class="text-[10px] font-mono text-gray-500" id="p-glow1Val">#60a5fa</span></div></div>
+                <div><label class="lbl">Glow 2</label><div class="flex items-center gap-2"><input type="color" id="p-glow2" value="#a78bfa" class="swatch"><span class="text-[10px] font-mono text-gray-500" id="p-glow2Val">#a78bfa</span></div></div>
+                <div class="col-span-2 sm:col-span-1"><div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>Glow Strength</span><span id="p-glowVal">50%</span></div><input type="range" id="p-glow" min="0" max="1" step="0.05" value="0.5" class="w-full accent-purple-600"></div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>Orb Drift Speed (when animated)</span><span id="p-orbSpeedVal">12s</span></div><input type="range" id="p-orbSpeed" min="4" max="30" step="1" value="12" class="w-full accent-purple-600"></div>
+              <div><div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>Card Float (when animated)</span><span id="p-floatVal">12px</span></div><input type="range" id="p-float" min="0" max="30" step="1" value="12" class="w-full accent-purple-600"></div>
+            </div>
+          </div>
+
+          <!-- CARD & TEXT -->
+          <div id="ptab-card" class="ppanel hidden space-y-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div><label class="lbl">Card Color</label><div class="flex items-center gap-2"><input type="color" id="p-card" value="#ffffff" class="swatch"><span class="text-[10px] font-mono text-gray-500" id="p-cardVal">#ffffff</span></div></div>
+              <div><label class="lbl">Title</label><div class="flex items-center gap-2"><input type="color" id="p-title" value="#111827" class="swatch"><span class="text-[10px] font-mono text-gray-500" id="p-titleVal">#111827</span></div></div>
+              <div><label class="lbl">Body Text</label><div class="flex items-center gap-2"><input type="color" id="p-text" value="#6b7280" class="swatch"><span class="text-[10px] font-mono text-gray-500" id="p-textVal">#6b7280</span></div></div>
+              <div><label class="lbl">Badge / Accent</label><div class="flex items-center gap-2"><input type="color" id="p-accent" value="#2563eb" class="swatch"><span class="text-[10px] font-mono text-gray-500" id="p-accentVal">#2563eb</span></div></div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div><div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>Card Opacity</span><span id="p-cardOpVal">95%</span></div><input type="range" id="p-cardOp" min="0" max="1" step="0.05" value="0.95" class="w-full accent-purple-600"></div>
+              <div><div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>Corner Radius</span><span id="p-radiusVal">32px</span></div><input type="range" id="p-radius" min="0" max="48" step="2" value="32" class="w-full accent-purple-600"></div>
+              <div><label class="lbl">QR Box Color</label><div class="flex items-center gap-2"><input type="color" id="p-qrbg" value="#ffffff" class="swatch"><span class="text-[10px] font-mono text-gray-500" id="p-qrbgVal">#ffffff</span></div></div>
+              <div><div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>QR Box Padding</span><span id="p-qrpadVal">24px</span></div><input type="range" id="p-qrpad" min="0" max="48" step="2" value="24" class="w-full accent-purple-600"></div>
+            </div>
+            <div class="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800">
+              <span class="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-2">Visible Elements</span>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="p-showBrand" checked class="rounded text-purple-600"> Top brand bar</label>
+                <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="p-showBadge" checked class="rounded text-purple-600"> Badge</label>
+                <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="p-showTitle" checked class="rounded text-purple-600"> Title</label>
+                <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="p-showSubtitle" checked class="rounded text-purple-600"> Subtitle</label>
+                <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="p-showFooter" checked class="rounded text-purple-600"> Footer note</label>
+                <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="p-showCredit" checked class="rounded text-purple-600"> Credit line</label>
+              </div>
+            </div>
+            <div><label class="lbl">Presenter Heading (shown above the grid, optional)</label><input type="text" id="p-heading" placeholder="e.g., Welcome — scan to get started" class="field field-sm"></div>
+          </div>
+
+          <!-- SCAN GUIDE -->
+          <div id="ptab-guide" class="ppanel hidden space-y-4">
+            <div class="flex flex-wrap items-center gap-4">
+              <label class="flex items-center gap-1.5 cursor-pointer text-xs"><input type="checkbox" id="p-guideShow" checked class="rounded text-purple-600"> Show scan guide in presenter</label>
+              <label class="flex items-center gap-1.5 cursor-pointer text-xs"><input type="checkbox" id="p-guideAnim" checked class="rounded text-purple-600"> Sequential step animation</label>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>Step Interval</span><span id="p-guideIntVal">2.5s</span></div><input type="range" id="p-guideInt" min="1" max="8" step="0.5" value="2.5" class="w-full accent-purple-600"></div>
+              <div><label class="lbl">Arrow Style</label>
+                <select id="p-arrow" class="field field-sm"><option value="chevron">Chevron ›</option><option value="arrow">Arrow →</option><option value="dots">Dots ···</option></select>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <div><label class="lbl">Step 1</label><input type="text" id="p-step1" value="Open your phone's Camera app or a QR scanner." class="field field-sm"></div>
+              <div><label class="lbl">Step 2</label><input type="text" id="p-step2" value="Point the camera steadily at the QR pattern." class="field field-sm"></div>
+              <div><label class="lbl">Step 3</label><input type="text" id="p-step3" value="Tap the banner or link that appears." class="field field-sm"></div>
+            </div>
+            <p class="text-[11px] text-gray-400">These steps also drive the "How to scan" accordion on the preview card and the PDF export.</p>
+          </div>
+
+          <!-- MULTI-QR -->
+          <div id="ptab-multi" class="ppanel hidden space-y-4">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+              <label class="flex items-center gap-2 cursor-pointer select-none">
+                <span class="relative inline-flex items-center">
+                  <input type="checkbox" id="p-multi" class="sr-only peer">
+                  <span class="w-9 h-5 bg-gray-300 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600 block"></span>
+                </span>
+                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Multi-QR presenter (up to 4 codes)</span>
+              </label>
+              <span class="text-[11px] text-gray-400">Grid adapts: 1 · 2 · 2×2 (4-across on wide screens)</span>
+            </div>
+            <div id="multiDrawer" class="hidden space-y-3">
+              <div id="slotsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+              <p class="text-[11px] text-gray-400">Each slot uses the same pattern, colors, corners and logo as the main code. Tick "Use main studio code" to mirror the code configured above.</p>
+            </div>
+            <p id="multiOffNote" class="text-[11px] text-gray-400">Turn this on to configure a Wi-Fi + Website + vCard + Socials board for a single presenter screen.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
+
+        <div class="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-xl flex flex-col items-center text-center transition-all relative overflow-hidden" id="qrCardPreview">
+          <div id="cardBadge" class="inline-flex items-center h-6 px-3 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 mb-3 shadow-sm leading-none">SCAN ME</div>
+          <h2 id="cardTitle" class="text-lg font-bold text-gray-900 dark:text-white leading-tight">Connect Quickly</h2>
+          <p id="cardSubtitle" class="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-5">Scan with camera app</p>
+
+          <div class="p-4 bg-white rounded-2xl shadow-inner border border-gray-200 dark:border-gray-700 flex items-center justify-center min-h-[260px] min-w-[260px]" id="qrCanvasContainer"></div>
+
+          <p id="cardFooter" class="text-xs font-medium text-gray-500 dark:text-gray-400 mt-4 max-w-xs leading-5">Point camera at code to open</p>
+
+          <div id="guideAccordion" class="w-full mt-5 pt-4 border-t border-gray-100 dark:border-gray-800/80 text-left">
+            <button id="guideToggleBtn" class="w-full flex items-center justify-between text-xs font-semibold text-gray-700 dark:text-gray-300 py-1 focus:outline-none group">
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-question text-blue-500"></i> How to scan this QR code</span>
+              <i id="guideArrow" class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-200 group-hover:text-blue-500"></i>
+            </button>
+            <div id="guideContent" class="hidden mt-3 space-y-2 text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800">
+              <div class="guide-step"><span class="badge bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">1</span><span class="txt" id="guideStep1">Open your phone's Camera app or a QR scanner.</span></div>
+              <div class="guide-step"><span class="badge bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">2</span><span class="txt" id="guideStep2">Point the camera steadily at the QR pattern.</span></div>
+              <div class="guide-step"><span class="badge bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">3</span><span class="txt" id="guideStep3">Tap the banner or link that appears.</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <button id="btnLaunchShowcase" class="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white font-semibold text-sm shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0">
+            <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+            <span id="launchLabel">Launch Presentation</span>
+          </button>
+          <div id="presenterSummary" class="flex flex-wrap justify-center gap-1.5 text-[11px]"></div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <button id="btnDownloadCard" class="py-2.5 px-3 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-medium text-xs hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm flex items-center justify-center gap-2 transition"><i class="fa-solid fa-download"></i><span>Export PNG</span></button>
+            <button id="btnDownloadPureQr" class="py-2.5 px-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-medium text-xs hover:bg-gray-50 dark:hover:bg-gray-700/60 shadow-sm flex items-center justify-center gap-2 transition"><i class="fa-solid fa-qrcode"></i><span>Download QR Only</span></button>
+            <button id="btnDownloadPdf" class="py-2.5 px-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-medium text-xs hover:bg-gray-50 dark:hover:bg-gray-700/60 shadow-sm flex items-center justify-center gap-2 transition"><i class="fa-solid fa-file-pdf text-red-500"></i><span>Export PDF</span></button>
+            <button id="btnCopyImage" class="py-2.5 px-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-medium text-xs hover:bg-gray-50 dark:hover:bg-gray-700/60 shadow-sm flex items-center justify-center gap-2 transition"><i class="fa-solid fa-copy text-blue-500"></i><span>Copy Image</span></button>
+          </div>
+        </div>
       </div>
     </div>
+  </main>
 
-    <div class="btn-grid">
-      <button class="btn btn-primary" onclick="exportPNG()">💾 Export PNG</button>
-      <button class="btn btn-secondary" onclick="exportPDF()">📄 Export PDF</button>
-      <button class="btn btn-presenter" onclick="launchPresenter()">📺 Launch Presentation Screen</button>
-    </div>
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-12 opacity-0 transition-all duration-300 pointer-events-none bg-gray-900 text-white dark:bg-white dark:text-gray-900 px-4 py-2.5 rounded-xl shadow-2xl text-xs font-medium flex items-center gap-2">
+    <i class="fa-solid fa-circle-check text-emerald-400 dark:text-emerald-600"></i>
+    <span id="toastMsg">Action completed successfully</span>
   </div>
-</div>
 
-<!-- Presenter Screen Modal -->
-<div class="presenter-modal" id="presenterModal">
-  <div class="presenter-nav">
-    <div class="brand">
-      <div class="brand-icon">QR</div>
-      <span>QR Studio Presenter Mode</span>
-    </div>
-    <button class="presenter-close" onclick="closePresenter()">✕ Close Presentation</button>
-  </div>
-  <div class="presenter-body">
-    <div class="presenter-grid" id="presenterGrid">
-      <!-- Dynamic QR Cards Injected Here -->
-    </div>
-  </div>
-</div>
+  <footer class="mt-auto py-6 border-t border-gray-200 dark:border-gray-800/80 bg-white dark:bg-gray-900 text-center text-xs text-gray-500 dark:text-gray-400">
+    <div class="max-w-7xl mx-auto px-4"><p>&copy; 2026 All rights reserved | Developer: DHStackWorks (dinethhesara20@gmail.com)</p></div>
+  </footer>
 
-<footer>
-  © 2026 All rights reserved | Developer: DHStackWorks (dinethhesara20@gmail.com)
-</footer>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const $ = (id) => document.getElementById(id);
+      const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      const hexToRgba = (hex, a) => {
+        const h = hex.replace('#', '');
+        const n = parseInt(h.length === 3 ? h.split('').map(x => x + x).join('') : h, 16);
+        return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+      };
 
-<script>
-  let logoDataUrl = "";
-  
-  // Initialize QR Generator
-  const qrCode = new QRCodeStyling({
-    width: 230,
-    height: 230,
-    type: "canvas",
-    data: "https://example.com",
-    dotsOptions: { color: "#1e293b", type: "rounded" },
-    backgroundOptions: { color: "#ffffff" },
-    cornersSquareOptions: { color: "#1e293b", type: "extra-rounded" },
-    cornersDotOptions: { color: "#1e293b", type: "dot" },
-    imageOptions: { crossOrigin: "anonymous", margin: 4, imageSize: 0.25 }
-  });
-
-  qrCode.append(document.getElementById("qrCanvas"));
-
-  // Input Type Renderer
-  const dataType = document.getElementById("dataType");
-  const dynamicInputs = document.getElementById("dynamicInputs");
-
-  function renderInputs() {
-    const val = dataType.value;
-    if (val === 'link' || val === 'text') {
-      dynamicInputs.innerHTML = `
-        <div class="form-group">
-          <label for="dataVal">${val === 'link' ? 'Website URL' : 'Plain Text'}</label>
-          <input type="text" id="dataVal" value="https://example.com">
-        </div>`;
-    } else if (val === 'wifi') {
-      dynamicInputs.innerHTML = `
-        <div class="form-group"><label>Network Name (SSID)</label><input type="text" id="wifiSsid" value="MyHomeWiFi"></div>
-        <div class="form-group"><label>Password</label><input type="password" id="wifiPass" value="Secret123"></div>`;
-    } else if (val === 'vcard') {
-      dynamicInputs.innerHTML = `
-        <div class="form-group"><label>Full Name</label><input type="text" id="vcName" value="John Doe"></div>
-        <div class="form-group"><label>Phone Number</label><input type="text" id="vcPhone" value="+1234567890"></div>`;
-    } else if (val === 'email') {
-      dynamicInputs.innerHTML = `
-        <div class="form-group"><label>Recipient Email</label><input type="email" id="mailTo" value="contact@example.com"></div>`;
-    }
-    bindInputEvents();
-    updateQR();
-  }
-
-  function bindInputEvents() {
-    const inputs = dynamicInputs.querySelectorAll("input");
-    inputs.forEach(i => i.addEventListener("input", updateQR));
-  }
-
-  dataType.addEventListener("change", renderInputs);
-  renderInputs();
-
-  function constructPayload() {
-    const val = dataType.value;
-    if (val === 'link' || val === 'text') return document.getElementById("dataVal")?.value || "https://example.com";
-    if (val === 'wifi') return `WIFI:S:${document.getElementById("wifiSsid")?.value};P:${document.getElementById("wifiPass")?.value};;`;
-    if (val === 'vcard') return `BEGIN:VCARD\nVERSION:3.0\nN:${document.getElementById("vcName")?.value}\nTEL:${document.getElementById("vcPhone")?.value}\nEND:VCARD`;
-    if (val === 'email') return `mailto:${document.getElementById("mailTo")?.value}`;
-    return "https://example.com";
-  }
-
-  function updateQR() {
-    qrCode.update({
-      data: constructPayload(),
-      image: logoDataUrl,
-      dotsOptions: {
-        color: document.getElementById("fgColor").value,
-        type: document.getElementById("dotsStyle").value
-      },
-      backgroundOptions: { color: document.getElementById("bgColor").value },
-      cornersSquareOptions: {
-        color: document.getElementById("fgColor").value,
-        type: document.getElementById("cornerSquareStyle").value
+      // ---------- 1. THEME ----------
+      const themeToggle = $('themeToggle');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+      function applyTheme(isDark) {
+        document.documentElement.classList.toggle('dark', isDark);
+        themeToggle.checked = isDark;
       }
-    });
-  }
+      applyTheme(prefersDark.matches);
+      prefersDark.addEventListener('change', e => applyTheme(e.matches));
+      themeToggle.addEventListener('change', () => applyTheme(themeToggle.checked));
 
-  // Theme Logic
-  const themeToggle = document.getElementById("themeToggle");
-  function applySystemTheme() {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
-    themeToggle.checked = prefersDark;
-  }
-  applySystemTheme();
+      // ---------- 2. QR ENGINE ----------
+      let currentLogoData = null;
+      const qrContainer = $('qrCanvasContainer');
 
-  themeToggle.addEventListener("change", (e) => {
-    document.documentElement.setAttribute('data-theme', e.target.checked ? 'dark' : 'light');
-  });
-
-  // Color & Input Bindings
-  document.getElementById("fgColor").addEventListener("input", (e) => {
-    document.getElementById("fgColorVal").innerText = e.target.value;
-    updateQR();
-  });
-  document.getElementById("bgColor").addEventListener("input", (e) => {
-    document.getElementById("bgColorVal").innerText = e.target.value;
-    updateQR();
-  });
-  document.getElementById("dotsStyle").addEventListener("change", updateQR);
-  document.getElementById("cornerSquareStyle").addEventListener("change", updateQR);
-
-  // Logo File
-  document.getElementById("logoFile").addEventListener("change", function(e) {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (evt) => { logoDataUrl = evt.target.result; updateQR(); };
-      reader.readAsDataURL(file);
-    }
-  });
-
-  // Label Bindings
-  document.getElementById("cardBadgeInput").addEventListener("input", e => document.getElementById("cardBadgeDisplay").innerText = e.target.value);
-  document.getElementById("cardTitleInput").addEventListener("input", e => document.getElementById("cardTitleDisplay").innerText = e.target.value);
-  document.getElementById("cardSubtitleInput").addEventListener("input", e => document.getElementById("cardSubtitleDisplay").innerText = e.target.value);
-  document.getElementById("cardDescInput").addEventListener("input", e => document.getElementById("cardDescDisplay").innerText = e.target.value);
-
-  // Drawer Toggle
-  document.getElementById("multiToggle").addEventListener("change", (e) => {
-    document.getElementById("multiDrawer").classList.toggle("active", e.target.checked);
-  });
-
-  // Guide Toggle
-  function toggleGuide() {
-    document.getElementById("guideContent").classList.toggle("open");
-  }
-
-  // Exports
-  function exportPNG() {
-    const card = document.getElementById("exportCard");
-    const guide = card.querySelector(".guide-accordion");
-    guide.style.display = "none"; // Hide scanning guide on PNG export
-    
-    html2canvas(card, { scale: 3, useCORS: true }).then(canvas => {
-      const link = document.createElement("a");
-      link.download = "qr-code.png";
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-      guide.style.display = "block"; // Restore
-    });
-  }
-
-  function exportPDF() {
-    const card = document.getElementById("exportCard");
-    const guideContent = document.getElementById("guideContent");
-    guideContent.classList.add("open"); // Force open step guide for PDF document
-
-    html2canvas(card, { scale: 3, useCORS: true }).then(canvas => {
-      const imgData = canvas.toDataURL("image/png");
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const cardWidth = 130;
-      const cardHeight = (canvas.height * cardWidth) / canvas.width;
-      
-      pdf.addImage(imgData, "PNG", (pdfWidth - cardWidth) / 2, 25, cardWidth, cardHeight);
-      pdf.save("qr-document.pdf");
-    });
-  }
-
-  // Presenter Launch
-  function launchPresenter() {
-    const isAnimated = document.getElementById("animToggle").checked;
-    const isMulti = document.getElementById("multiToggle").checked;
-    const grid = document.getElementById("presenterGrid");
-    grid.innerHTML = "";
-
-    const items = [
-      {
-        title: document.getElementById("cardTitleDisplay").innerText,
-        sub: document.getElementById("cardSubtitleDisplay").innerText,
-        data: constructPayload()
-      }
-    ];
-
-    if (isMulti) {
-      ['multi2', 'multi3', 'multi4'].forEach((id, idx) => {
-        const raw = document.getElementById(id).value.trim();
-        if (raw) {
-          const parts = raw.split('|');
-          items.push({
-            title: parts[0] || `Code ${idx + 2}`,
-            sub: "Scan to open",
-            data: parts[1] ? parts[1].trim() : parts[0].trim()
-          });
+      function buildStyleOptions(data) {
+        const fg1 = $('fgColor1').value, fg2 = $('fgColor2').value;
+        const isGradient = $('enableGradient').checked;
+        const dotsOptions = { type: $('dotStyle').value };
+        if (isGradient) {
+          dotsOptions.gradient = { type: 'linear', rotation: 45, colorStops: [{ offset: 0, color: fg1 }, { offset: 1, color: fg2 }] };
+        } else {
+          dotsOptions.color = fg1;
         }
+        const cornerStyle = $('cornerFrameStyle').value;
+        const cornerColor = $('cornerFrameColor').value;
+        return {
+          data,
+          image: currentLogoData || '',
+          dotsOptions,
+          backgroundOptions: { color: $('transparentBg').checked ? 'transparent' : $('bgColor').value },
+          cornersSquareOptions: { type: cornerStyle, color: cornerColor },
+          cornersDotOptions: { type: cornerStyle === 'dot' ? 'dot' : 'square', color: cornerColor },
+          imageOptions: { crossOrigin: 'anonymous', margin: parseInt($('logoMargin').value, 10), imageSize: parseFloat($('logoSize').value) },
+          qrOptions: { errorCorrectionLevel: $('ecLevel').value }
+        };
+      }
+
+      const qrCode = new QRCodeStyling({ width: 260, height: 260, type: 'canvas', ...buildStyleOptions('https://example.com') });
+      qrCode.append(qrContainer);
+
+      // ---------- 3. DATA BUILDERS ----------
+      let activeType = 'url';
+      const wifiString = (type, ssid, pass, hidden) => `WIFI:T:${type};S:${ssid};P:${pass};H:${hidden ? 'true' : 'false'};;`;
+      const vcardString = (fn, ln, phone, email, org, title, web) =>
+        `BEGIN:VCARD\nVERSION:3.0\nN:${ln};${fn};;;\nFN:${fn} ${ln}\nTEL;TYPE=CELL:${phone}\nEMAIL:${email}\nORG:${org}\nTITLE:${title}\nURL:${web}\nEND:VCARD`;
+
+      function generateDataString() {
+        const v = id => $(id).value.trim();
+        switch (activeType) {
+          case 'url': return v('input-url') || 'https://example.com';
+          case 'text': return v('input-text') || 'Hello';
+          case 'wifi': return wifiString($('wifi-type').value, v('wifi-ssid') || 'MyWiFi', v('wifi-password'), $('wifi-hidden').checked);
+          case 'vcard': return vcardString(v('vcard-fn') || 'John', v('vcard-ln') || 'Doe', v('vcard-phone'), v('vcard-email'), v('vcard-company'), v('vcard-title'), v('vcard-url'));
+          case 'email': return `mailto:${v('email-to')}?subject=${encodeURIComponent(v('email-subject'))}&body=${encodeURIComponent(v('email-body'))}`;
+          case 'sms': {
+            const num = v('sms-phone'), msg = v('sms-message');
+            return $('sms-mode').value === 'whatsapp'
+              ? `https://wa.me/${num.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`
+              : `sms:${num}?body=${encodeURIComponent(msg)}`;
+          }
+          case 'file': return window.uploadedFileData || v('file-url') || 'https://example.com';
+          default: return 'https://example.com';
+        }
+      }
+
+      const mainLabels = () => ({
+        badge: $('labelBadge').value || 'SCAN ME',
+        title: $('labelTitle').value || 'Connect Quickly',
+        subtitle: $('labelSubtitle').value || 'Scan with camera app',
+        footer: $('labelFooter').value || 'Point camera at code to open'
+      });
+
+      // ---------- 4. LIVE UPDATE ----------
+      function updateQrCode() {
+        qrCode.update(buildStyleOptions(generateDataString()));
+        const l = mainLabels();
+        $('cardBadge').textContent = l.badge;
+        $('cardTitle').textContent = l.title;
+        $('cardSubtitle').textContent = l.subtitle;
+        $('cardFooter').textContent = l.footer;
+        $('guideStep1').textContent = $('p-step1').value || 'Open your phone\'s Camera app.';
+        $('guideStep2').textContent = $('p-step2').value || 'Point the camera at the code.';
+        $('guideStep3').textContent = $('p-step3').value || 'Tap the link that appears.';
+        updatePresenterSummary();
+      }
+
+      const tabBtns = document.querySelectorAll('.tab-btn');
+      const formSections = document.querySelectorAll('.type-form');
+      tabBtns.forEach(btn => btn.addEventListener('click', () => {
+        tabBtns.forEach(b => {
+          b.classList.remove('active', 'border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/30', 'text-blue-600', 'dark:text-blue-400');
+          b.classList.add('border-gray-200', 'dark:border-gray-800', 'text-gray-600', 'dark:text-gray-400');
+        });
+        btn.classList.add('active', 'border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/30', 'text-blue-600', 'dark:text-blue-400');
+        btn.classList.remove('border-gray-200', 'dark:border-gray-800', 'text-gray-600', 'dark:text-gray-400');
+        activeType = btn.dataset.type;
+        formSections.forEach(f => f.classList.add('hidden'));
+        $(`form-${activeType}`).classList.remove('hidden');
+        updateQrCode();
+      }));
+
+      // Any static control (not inside the dynamic slots) triggers a live update
+      document.querySelectorAll('input, select, textarea').forEach(input => {
+        if (input.closest('#slotsContainer')) return;
+        input.addEventListener('input', updateQrCode);
+        input.addEventListener('change', updateQrCode);
+      });
+
+      $('enableGradient').addEventListener('change', e => {
+        $('gradientColor2Group').classList.toggle('hidden', !e.target.checked);
+        $('gradientColor2Group').classList.toggle('flex', e.target.checked);
+      });
+
+      // Generic hex / value labels (any input with a matching "<id>Val" element)
+      document.querySelectorAll('input[type=color], input[type=range]').forEach(el => {
+        const valEl = $(el.id + 'Val');
+        if (!valEl) return;
+        const fmt = {
+          'logoSize': v => Math.round(v * 100) + '%', 'logoMargin': v => v + 'px',
+          'p-orbOp': v => Math.round(v * 100) + '%', 'p-orbSize': v => v + 'px', 'p-orbBlur': v => v + 'px',
+          'p-glow': v => Math.round(v * 100) + '%', 'p-cardOp': v => Math.round(v * 100) + '%',
+          'p-radius': v => v + 'px', 'p-qrpad': v => v + 'px', 'p-guideInt': v => v + 's',
+          'p-orbSpeed': v => v + 's', 'p-float': v => v + 'px'
+        }[el.id] || (v => v);
+        const sync = () => valEl.textContent = fmt(el.value);
+        el.addEventListener('input', sync);
+        sync();
+      });
+
+      // ---------- 5. LOGOS & FILES ----------
+      const logoPresets = {
+        wifi: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" fill="%233b82f6"><path d="M0 192C0 103.6 143.3 32 320 32S640 103.6 640 192c0 24.4-10.8 47.7-29.8 65.7-18.9 17.9-45.2 28.3-73.2 28.3-51.2 0-93.5-35.3-103.1-83.3-15.5 8.7-33.8 13.3-53.9 13.3-33.7 0-63.7-13.3-85-35.3C273.7 202.7 243.7 216 210 216c-20.1 0-38.4-4.6-53.9-13.3C146.5 250.7 104.2 286 53 286c-28 0-54.3-10.4-73.2-28.3C-10.8 239.7 0 216.4 0 192zM320 352a96 96 0 1 1 0 192 96 96 0 1 1 0-192z"/></svg>',
+        globe: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="%236366f1"><path d="M512 256C512 397.4 397.4 512 256 512C114.6 512 0 397.4 0 256C0 114.6 114.6 0 256 0C397.4 0 512 114.6 512 256zM256 48c-29.1 0-57.3 5.2-83.2 14.7C191.5 90.7 208 126.3 208 166.4c0 38.2-15 72.8-39.7 98.4c18.1 27.2 48.7 45.2 83.7 47.1c8.4-32.9 38.3-57.9 74-57.9c13.7 0 26.5 3.7 37.6 10.1C380 231.2 384 196.1 384 160c0-61.9-25.1-117.9-65.6-158.4z"/></svg>',
+        whatsapp: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="%2310b981"><path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3 18.6-68.1-4.4-6.9c-18.6-29.5-28.4-63.3-28.4-98.2 0-101.4 82.5-184 184-184 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.5-84.9 184.3-186.3 184.3z"/></svg>',
+        instagram: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="%23ec4899"><path d="M224.1 141.1c-45.8 0-82.8 37-82.8 82.8 0 45.8 37 82.8 82.8 82.8 45.8 0 82.8-37 82.8-82.8 0-45.8-37-82.8-82.8-82.8zm0 135c-28.8 0-52.2-23.4-52.2-52.2 0-28.8 23.4-52.2 52.2-52.2 28.8 0 52.2 23.4 52.2 52.2 0 28.8-23.4 52.2-52.2 52.2zm120.2-143.1c-10.4 0-18.9 8.5-18.9 18.9s8.5 18.9 18.9 18.9 18.9-8.5 18.9-18.9-8.5-18.9-18.9-18.9zM224 0C100.3 0 0 100.3 0 224s100.3 224 224 224 224-100.3 224-224S347.7 0 224 0z"/></svg>',
+        envelope: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="%23f59e0b"><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4l217.6 163.2c11.4 8.5 27 8.5 38.4 0l217.6-163.2c12.1-9.1 19.2-23.3 19.2-38.4 0-26.5-21.5-48-48-48H48zM0 176v224c0 26.5 21.5 48 48 48h416c26.5 0 48-21.5 48-48V176L294.4 338.3c-22.8 17.1-54 17.1-76.8 0L0 176z"/></svg>',
+        heart: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="%23ef4444"><path d="M47.6 300.4L228.3 469.1c7.5 7 17.4 10.9 27.7 10.9s20.2-3.9 27.7-10.9L464.4 300.4c30.4-28.3 47.6-68 47.6-109.5v-5.8c0-69.9-50.5-129.5-119.4-141-34.7-5.8-70.8 2.7-98 23L256 90l-38.6-22c-27.2-20.3-63.3-28.8-98-23C50.5 56.5 0 116.1 0 186v5.8c0 41.5 17.2 81.2 47.6 109.5z"/></svg>',
+        star: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="%23eab308"><path d="M316.9 18C311.6 7 300.4 0 288 0s-23.6 7-28.9 18L180.9 179.6 7.1 204.8c-12.1 1.8-21.8 10.2-24.8 22s1.2 24.2 10.6 31.9l125.7 103-29.7 173.1c-2.1 12.1 2.9 24.3 12.8 31.5s23 8.3 33.7 2.7l152.5-80.2 152.5 80.2c10.7 5.6 23.9 4.5 33.7-2.7s14.9-19.4 12.8-31.5l-29.7-173.1 125.7-103c9.4-7.7 13.6-20.1 10.6-31.9s-12.7-20.2-24.8-22L395.1 179.6 316.9 18z"/></svg>'
+      };
+      document.querySelectorAll('.preset-logo-btn').forEach(btn => btn.addEventListener('click', () => {
+        currentLogoData = logoPresets[btn.dataset.icon];
+        $('clearLogoBtn').classList.remove('hidden');
+        updateQrCode();
+      }));
+      $('customLogoInput').addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = evt => { currentLogoData = evt.target.result; $('clearLogoBtn').classList.remove('hidden'); updateQrCode(); };
+        reader.readAsDataURL(file);
+      });
+      $('clearLogoBtn').addEventListener('click', () => {
+        currentLogoData = null; $('clearLogoBtn').classList.add('hidden'); $('customLogoInput').value = ''; updateQrCode();
+      });
+
+      const fileInput = $('file-input');
+      $('fileDropZone').addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = evt => { window.uploadedFileData = evt.target.result; showToast('File loaded and converted to code'); updateQrCode(); };
+        reader.readAsDataURL(file);
+      });
+
+      // ---------- 6. GUIDE ACCORDION ----------
+      $('guideToggleBtn').addEventListener('click', () => {
+        const hidden = $('guideContent').classList.toggle('hidden');
+        $('guideArrow').style.transform = hidden ? 'rotate(0deg)' : 'rotate(180deg)';
+      });
+
+      // ---------- 7. PRESENTER SETTINGS UI ----------
+      document.querySelectorAll('.ptab').forEach(btn => btn.addEventListener('click', () => {
+        document.querySelectorAll('.ptab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.ppanel').forEach(p => p.classList.add('hidden'));
+        $('ptab-' + btn.dataset.ptab).classList.remove('hidden');
+      }));
+
+      const AMBIENCE_PRESETS = {
+        midnight: { bg: '#030712', orb1: '#3b82f6', orb2: '#8b5cf6', glow1: '#3b82f6', glow2: '#8b5cf6', card: '#111827', title: '#ffffff', text: '#9ca3af', accent: '#3b82f6', qrbg: '#ffffff', cardOp: 0.7, orbOp: 0.4 },
+        aurora:   { bg: '#02140f', orb1: '#10b981', orb2: '#06b6d4', glow1: '#10b981', glow2: '#06b6d4', card: '#052e2b', title: '#ecfeff', text: '#99f6e4', accent: '#10b981', qrbg: '#ffffff', cardOp: 0.7, orbOp: 0.45 },
+        sunset:   { bg: '#1a0710', orb1: '#f97316', orb2: '#ec4899', glow1: '#f97316', glow2: '#ec4899', card: '#2a0f1a', title: '#fff7ed', text: '#fdba74', accent: '#f97316', qrbg: '#ffffff', cardOp: 0.75, orbOp: 0.45 },
+        light:    { bg: '#f3f4f6', orb1: '#93c5fd', orb2: '#c4b5fd', glow1: '#60a5fa', glow2: '#a78bfa', card: '#ffffff', title: '#111827', text: '#6b7280', accent: '#2563eb', qrbg: '#ffffff', cardOp: 0.95, orbOp: 0.5 },
+        mono:     { bg: '#000000', orb1: '#333333', orb2: '#555555', glow1: '#ffffff', glow2: '#888888', card: '#0a0a0a', title: '#ffffff', text: '#a3a3a3', accent: '#ffffff', qrbg: '#ffffff', cardOp: 0.85, orbOp: 0.35 }
+      };
+      let activePreset = 'light';
+      document.querySelectorAll('.amb-preset').forEach(btn => btn.addEventListener('click', () => {
+        const p = AMBIENCE_PRESETS[btn.dataset.preset];
+        activePreset = btn.dataset.preset;
+        const map = { bg: 'p-bg', orb1: 'p-orb1', orb2: 'p-orb2', glow1: 'p-glow1', glow2: 'p-glow2', card: 'p-card', title: 'p-title', text: 'p-text', accent: 'p-accent', qrbg: 'p-qrbg', cardOp: 'p-cardOp', orbOp: 'p-orbOp' };
+        Object.entries(map).forEach(([k, id]) => { $(id).value = p[k]; $(id).dispatchEvent(new Event('input')); });
+        updatePresenterSummary();
+        showToast('Ambience preset applied: ' + btn.textContent.trim());
+      }));
+      ['p-bg', 'p-orb1', 'p-orb2', 'p-glow1', 'p-glow2', 'p-card'].forEach(id => $(id).addEventListener('input', () => activePreset = 'custom'));
+
+      $('p-anim').addEventListener('change', () => {
+        const on = $('p-anim').checked;
+        $('p-animState').textContent = on ? 'ON' : 'OFF';
+        $('p-animState').className = 'chip ' + (on ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300');
+      });
+
+      // ---------- 8. MULTI-QR SLOTS ----------
+      const SLOT_TYPES = {
+        url:      { label: 'Link / Website', fields: [{ k: 'url', l: 'Website URL', ph: 'https://yoursite.com' }] },
+        text:     { label: 'Plain Text', fields: [{ k: 'text', l: 'Text', ph: 'Any message', ta: true }] },
+        wifi:     { label: 'Wi-Fi', fields: [{ k: 'ssid', l: 'Network (SSID)', ph: 'GuestWiFi' }, { k: 'pass', l: 'Password', ph: '' }, { k: 'enc', l: 'Encryption', sel: [['WPA', 'WPA/WPA2/WPA3'], ['WEP', 'WEP'], ['nopass', 'Open']] }] },
+        vcard:    { label: 'Contact (vCard)', fields: [{ k: 'fn', l: 'First name' }, { k: 'ln', l: 'Last name' }, { k: 'phone', l: 'Phone', ph: '+94...' }, { k: 'email', l: 'Email' }, { k: 'org', l: 'Company' }, { k: 'web', l: 'Website' }] },
+        whatsapp: { label: 'WhatsApp', fields: [{ k: 'phone', l: 'Phone (intl format)', ph: '+94771234567' }, { k: 'msg', l: 'Pre-filled message', ph: 'Hi!' }] },
+        email:    { label: 'Email', fields: [{ k: 'to', l: 'Recipient' }, { k: 'subject', l: 'Subject' }] },
+        social:   { label: 'Social Profile', fields: [{ k: 'url', l: 'Profile URL', ph: 'https://instagram.com/yourbrand' }] }
+      };
+      const slotState = [
+        { enabled: true,  useMain: true,  type: 'url',    badge: 'SCAN ME', title: 'Main Code', subtitle: 'Mirrors the studio code', values: {} },
+        { enabled: true,  useMain: false, type: 'wifi',   badge: 'WI-FI',   title: 'Guest Wi-Fi', subtitle: 'Join the network', values: { enc: 'WPA' } },
+        { enabled: false, useMain: false, type: 'vcard',  badge: 'CONTACT', title: 'Save Contact', subtitle: 'Add us to your phone', values: {} },
+        { enabled: false, useMain: false, type: 'social', badge: 'FOLLOW',  title: 'Socials', subtitle: 'Follow for updates', values: {} }
+      ];
+
+      function slotFieldsHtml(i, s) {
+        return SLOT_TYPES[s.type].fields.map(f => {
+          const val = s.values[f.k] ?? '';
+          if (f.sel) return `<div><label class="lbl">${f.l}</label><select class="field field-sm" data-slot="${i}" data-key="${f.k}">${f.sel.map(([v, t]) => `<option value="${v}" ${v === val ? 'selected' : ''}>${t}</option>`).join('')}</select></div>`;
+          if (f.ta) return `<div class="sm:col-span-2"><label class="lbl">${f.l}</label><textarea rows="2" class="field field-sm" data-slot="${i}" data-key="${f.k}" placeholder="${esc(f.ph || '')}">${esc(val)}</textarea></div>`;
+          return `<div><label class="lbl">${f.l}</label><input type="text" class="field field-sm" data-slot="${i}" data-key="${f.k}" value="${esc(val)}" placeholder="${esc(f.ph || '')}"></div>`;
+        }).join('');
+      }
+
+      function renderSlots() {
+        $('slotsContainer').innerHTML = slotState.map((s, i) => `
+          <div class="rounded-xl border ${s.enabled ? 'border-purple-300 dark:border-purple-700/60' : 'border-gray-200 dark:border-gray-800'} p-3 space-y-2 ${s.enabled ? '' : 'opacity-70'}">
+            <div class="flex items-center justify-between">
+              <label class="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-200 cursor-pointer">
+                <input type="checkbox" data-slot="${i}" data-key="__enabled" ${s.enabled ? 'checked' : ''} class="rounded text-purple-600"> Slot ${i + 1}
+              </label>
+              <label class="flex items-center gap-1.5 text-[11px] text-gray-500 cursor-pointer">
+                <input type="checkbox" data-slot="${i}" data-key="__useMain" ${s.useMain ? 'checked' : ''} class="rounded text-purple-600"> Use main studio code
+              </label>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div><label class="lbl">Badge</label><input type="text" class="field field-sm" data-slot="${i}" data-key="__badge" value="${esc(s.badge)}"></div>
+              <div><label class="lbl">Title</label><input type="text" class="field field-sm" data-slot="${i}" data-key="__title" value="${esc(s.title)}"></div>
+              <div class="col-span-2"><label class="lbl">Subtitle</label><input type="text" class="field field-sm" data-slot="${i}" data-key="__subtitle" value="${esc(s.subtitle)}"></div>
+            </div>
+            <div class="${s.useMain ? 'hidden' : ''} space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <div><label class="lbl">Code Type</label>
+                <select class="field field-sm" data-slot="${i}" data-key="__type">${Object.entries(SLOT_TYPES).map(([k, t]) => `<option value="${k}" ${k === s.type ? 'selected' : ''}>${t.label}</option>`).join('')}</select>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">${slotFieldsHtml(i, s)}</div>
+            </div>
+          </div>`).join('');
+        updatePresenterSummary();
+      }
+
+      $('slotsContainer').addEventListener('input', e => {
+        const el = e.target; const i = +el.dataset.slot; const k = el.dataset.key;
+        if (Number.isNaN(i) || !k) return;
+        const s = slotState[i];
+        if (k === '__enabled') { s.enabled = el.checked; renderSlots(); return; }
+        if (k === '__useMain') { s.useMain = el.checked; renderSlots(); return; }
+        if (k === '__type') { s.type = el.value; s.values = s.type === 'wifi' ? { enc: 'WPA' } : {}; renderSlots(); return; }
+        if (k === '__badge') s.badge = el.value;
+        else if (k === '__title') s.title = el.value;
+        else if (k === '__subtitle') s.subtitle = el.value;
+        else s.values[k] = el.value;
+        updatePresenterSummary();
+      });
+      $('slotsContainer').addEventListener('change', e => {
+        if (e.target.tagName === 'SELECT' || e.target.type === 'checkbox') e.target.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+
+      $('p-multi').addEventListener('change', () => {
+        const on = $('p-multi').checked;
+        $('multiDrawer').classList.toggle('hidden', !on);
+        $('multiOffNote').classList.toggle('hidden', on);
+        updatePresenterSummary();
+      });
+      renderSlots();
+
+      function slotData(s) {
+        const v = s.values;
+        switch (s.type) {
+          case 'url': case 'social': return (v.url || '').trim() || 'https://example.com';
+          case 'text': return (v.text || '').trim() || 'Hello';
+          case 'wifi': return wifiString(v.enc || 'WPA', (v.ssid || '').trim() || 'MyWiFi', (v.pass || '').trim(), false);
+          case 'vcard': return vcardString((v.fn || '').trim() || 'John', (v.ln || '').trim() || 'Doe', (v.phone || '').trim(), (v.email || '').trim(), (v.org || '').trim(), '', (v.web || '').trim());
+          case 'whatsapp': return `https://wa.me/${(v.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent((v.msg || '').trim())}`;
+          case 'email': return `mailto:${(v.to || '').trim()}?subject=${encodeURIComponent((v.subject || '').trim())}`;
+          default: return 'https://example.com';
+        }
+      }
+
+      function activeCardSpecs() {
+        const main = mainLabels();
+        if (!$('p-multi').checked) return [{ ...main, data: generateDataString() }];
+        const specs = slotState.filter(s => s.enabled).slice(0, 4).map(s => s.useMain
+          ? { ...main, badge: s.badge || main.badge, title: s.title || main.title, subtitle: s.subtitle || main.subtitle, data: generateDataString() }
+          : { badge: s.badge || 'SCAN', title: s.title || 'QR Code', subtitle: s.subtitle || '', footer: main.footer, data: slotData(s) });
+        return specs.length ? specs : [{ ...main, data: generateDataString() }];
+      }
+
+      function updatePresenterSummary() {
+        const n = activeCardSpecs().length;
+        $('multiCountChip').textContent = $('p-multi').checked ? n : 1;
+        $('launchLabel').textContent = n > 1 ? `Launch Presentation (${n} codes)` : 'Launch Presentation';
+        const anim = $('p-anim').checked;
+        const chips = [
+          [`${n} code${n > 1 ? 's' : ''}`, 'fa-qrcode'],
+          [`Animations ${anim ? 'ON' : 'OFF'}`, anim ? 'fa-bolt' : 'fa-pause'],
+          [activePreset === 'custom' ? 'Custom ambience' : activePreset.charAt(0).toUpperCase() + activePreset.slice(1), 'fa-sun'],
+          [$('p-guideShow').checked ? 'Guide shown' : 'Guide hidden', 'fa-list-ol']
+        ];
+        $('presenterSummary').innerHTML = chips.map(([t, ic]) => `<span class="chip bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"><i class="fa-solid ${ic} text-[10px]"></i>${esc(t)}</span>`).join('');
+      }
+
+      // ---------- 9. PRESENTER BUILD ----------
+      const blobToDataUrl = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+
+      async function renderQrDataUrl(data, size) {
+        const q = new QRCodeStyling({ width: size, height: size, type: 'canvas', ...buildStyleOptions(data) });
+        const blob = await q.getRawData('png');
+        return blobToDataUrl(blob);
+      }
+
+      function readPresenterSettings() {
+        const v = id => $(id).value, c = id => $(id).checked;
+        return {
+          anim: c('p-anim'), bg: v('p-bg'), orb1: v('p-orb1'), orb2: v('p-orb2'), orbOp: +v('p-orbOp'), orbSize: +v('p-orbSize'), orbBlur: +v('p-orbBlur'),
+          orbSpeed: +v('p-orbSpeed'), float: +v('p-float'), neon: c('p-neon'), vignette: c('p-vignette'), glow1: v('p-glow1'), glow2: v('p-glow2'), glow: +v('p-glow'), font: v('p-font'),
+          card: v('p-card'), cardOp: +v('p-cardOp'), radius: +v('p-radius'), title: v('p-title'), text: v('p-text'), accent: v('p-accent'), qrbg: v('p-qrbg'), qrpad: +v('p-qrpad'),
+          showBrand: c('p-showBrand'), showBadge: c('p-showBadge'), showTitle: c('p-showTitle'), showSubtitle: c('p-showSubtitle'), showFooter: c('p-showFooter'), showCredit: c('p-showCredit'),
+          heading: v('p-heading').trim(),
+          guideShow: c('p-guideShow'), guideAnim: c('p-guideAnim'), guideInt: +v('p-guideInt'), arrow: v('p-arrow'),
+          steps: [v('p-step1'), v('p-step2'), v('p-step3')].map(s => s.trim()).filter(Boolean)
+        };
+      }
+
+      function buildPresenterHtml(P, cards) {
+        const n = cards.length;
+        const qrSize = n === 1 ? 'clamp(180px, 32vmin, 480px)' : n === 2 ? 'clamp(150px, 26vmin, 380px)' : 'clamp(130px, 20vmin, 300px)';
+        const arrowGlyph = P.arrow === 'arrow' ? '&#10140;' : P.arrow === 'dots' ? '&middot;&middot;&middot;' : '&#8250;';
+        const fontUrl = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(P.font).replace(/%20/g, '+') + ':wght@400;600;700;800&display=swap';
+
+        const cardHtml = cards.map((c, i) => `
+          <div class="cell"><article class="card" style="--i:${i}">
+            ${P.showBadge && c.badge ? `<span class="badge">${esc(c.badge)}</span>` : ''}
+            ${P.showTitle && c.title ? `<h2 class="title">${esc(c.title)}</h2>` : ''}
+            ${P.showSubtitle && c.subtitle ? `<p class="sub">${esc(c.subtitle)}</p>` : ''}
+            <div class="qr"><img src="${c.img}" alt="QR code: ${esc(c.title)}"></div>
+            ${P.showFooter && c.footer ? `<p class="foot">&#128247; ${esc(c.footer)}</p>` : ''}
+          </article></div>`).join('');
+
+        const guideHtml = P.guideShow && P.steps.length ? `
+          <section class="guide" id="guide">
+            ${P.steps.map((s, i) => `
+              ${i > 0 ? `<span class="arrow">${arrowGlyph}</span>` : ''}
+              <div class="step" data-i="${i}"><span class="num">${i + 1}</span><span>${esc(s)}</span></div>`).join('')}
+          </section>` : '';
+
+        return `<!DOCTYPE html>
+<html lang="en" class="${P.anim ? 'anim' : ''}">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presenter${P.heading ? ' - ' + esc(P.heading) : (cards[0] && cards[0].title ? ' - ' + esc(cards[0].title) : '')}</title>
+<link rel="stylesheet" href="${fontUrl}">
+<style>
+  :root{
+    --bg:${P.bg}; --orb1:${P.orb1}; --orb2:${P.orb2}; --orb-op:${P.orbOp}; --orb-size:${P.orbSize}px; --orb-blur:${P.orbBlur}px; --orb-speed:${P.orbSpeed}s; --float:${P.float}px;
+    --glow1:${P.glow1}; --glow2:${P.glow2}; --glow:${P.glow};
+    --card:${hexToRgba(P.card, P.cardOp)}; --radius:${P.radius}px; --title:${P.title}; --text:${P.text}; --accent:${P.accent}; --accent-soft:${hexToRgba(P.accent, 0.18)}; --accent-line:${hexToRgba(P.accent, 0.4)};
+    --qrbg:${P.qrbg}; --qrpad:${P.qrpad}px; --qr:${qrSize};
+    --font:'${P.font}', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);overflow-x:hidden;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;padding:clamp(.75rem,2vw,1.5rem);position:relative}
+  .orb{position:fixed;border-radius:50%;filter:blur(var(--orb-blur));opacity:var(--orb-op);width:var(--orb-size);height:var(--orb-size);pointer-events:none;z-index:0}
+  .orb-1{background:var(--orb1);top:calc(var(--orb-size) * -.3);left:calc(var(--orb-size) * -.3)}
+  .orb-2{background:var(--orb2);bottom:calc(var(--orb-size) * -.35);right:calc(var(--orb-size) * -.25)}
+  .vignette{position:fixed;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%)}
+  .topbar{position:relative;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;max-width:1800px;margin:0 auto;width:100%}
+  .brand{display:flex;align-items:center;gap:.5rem;font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text)}
+  .brand i{width:1.75rem;height:1.75rem;border-radius:.5rem;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-style:normal;font-size:.8rem}
+  .ctrls{display:flex;gap:.5rem;flex-wrap:wrap}
+  .btn{font:inherit;font-size:.72rem;font-weight:600;padding:.45rem .8rem;border-radius:.7rem;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--title);cursor:pointer;transition:transform .15s,background .15s}
+  .btn:hover{transform:translateY(-1px)}
+  .btn.off{opacity:.6}
+  .btn.danger{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.15);color:#fca5a5}
+  main{position:relative;z-index:3;flex:1;min-height:0;display:grid;grid-template-rows:${P.heading ? 'auto ' : ''}minmax(0,1fr)${guideHtml ? ' auto' : ''};gap:clamp(.75rem,2vh,1.5rem);padding:clamp(.75rem,2vh,1.5rem) 0;width:100%}
+  .heading{margin:0;font-size:clamp(1.1rem,2.6vw,2.2rem);font-weight:800;color:var(--title);text-align:center;letter-spacing:-.01em}
+  /* Grid of equal cells; each cell is a measured box the QR is fitted into */
+  .cards{display:grid;gap:clamp(.75rem,2vw,2rem);width:100%;height:100%;min-height:0;margin:0 auto}
+  .cards[data-count="1"]{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+  .cards[data-count="2"]{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:minmax(0,1fr)}
+  .cards[data-count="3"]{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:minmax(0,1fr)}
+  .cards[data-count="4"]{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr))}
+  @media (min-aspect-ratio:21/9){.cards[data-count="4"]{grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:minmax(0,1fr)}}
+  @media (max-aspect-ratio:1/1){
+    .cards[data-count="2"]{grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(2,minmax(0,1fr))}
+    .cards[data-count="3"]{grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(3,minmax(0,1fr))}
+  }
+  .cell{display:flex;align-items:center;justify-content:center;min-width:0;min-height:0}
+  .card{position:relative;max-width:100%;border-radius:var(--radius);background:var(--card);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid ${hexToRgba(P.title, 0.08)};
+        padding:clamp(.9rem,2vw,2rem);text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;
+        box-shadow:0 0 calc(60px * var(--glow)) ${hexToRgba(P.glow1, 0.45)}, 0 0 calc(120px * var(--glow)) ${hexToRgba(P.glow2, 0.25)}}
+  ${P.neon ? `.card::before{content:'';position:absolute;inset:-2px;border-radius:calc(var(--radius) + 2px);background:linear-gradient(45deg,var(--glow1),var(--glow2),var(--glow1));background-size:300% 300%;z-index:-1;opacity:calc(.35 + var(--glow) * .5);filter:blur(10px)}` : ''}
+  .badge{display:inline-flex;align-items:center;height:1.75rem;padding:0 1rem;border-radius:9999px;font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-line);margin-bottom:.9rem;line-height:1}
+  .title{margin:0 0 .25rem;font-size:clamp(1.1rem,1.6vw + .5rem,1.9rem);font-weight:800;color:var(--title);letter-spacing:-.01em;line-height:1.2}
+  .sub{margin:0 0 1.1rem;font-size:clamp(.72rem,.9vw,.95rem);line-height:1.4}
+  .qr{background:var(--qrbg);padding:var(--qrpad);border-radius:calc(var(--radius) * .6);box-shadow:0 10px 30px rgba(0,0,0,.2);display:inline-flex;max-width:100%}
+  .qr img{width:var(--qr);height:var(--qr);max-width:100%;display:block;image-rendering:-webkit-optimize-contrast}
+  .foot{margin:1.1rem 0 0;font-size:clamp(.68rem,.85vw,.9rem);line-height:1.4}
+  .guide{display:flex;align-items:stretch;justify-content:center;gap:clamp(.4rem,1vw,1rem);flex-wrap:wrap;max-width:1100px;width:100%;margin:0 auto}
+  .step{display:flex;align-items:flex-start;gap:.55rem;flex:1 1 14rem;max-width:22rem;padding:.7rem .9rem;border-radius:.9rem;border:1px solid ${hexToRgba(P.title, 0.08)};background:${hexToRgba(P.title, 0.04)};font-size:clamp(.72rem,.9vw,.95rem);line-height:1.35;color:var(--text);transition:border-color .4s,background .4s,transform .4s,opacity .4s}
+  .step .num{flex:0 0 1.35rem;width:1.35rem;height:1.35rem;border-radius:50%;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-line);display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;line-height:1;margin-top:1px}
+  .step.active{border-color:var(--accent-line);background:var(--accent-soft);color:var(--title);transform:translateY(-2px)}
+  .anim .guide.seq .step:not(.active){opacity:.45}
+  .arrow{align-self:center;color:var(--accent);font-size:1.4rem;line-height:1;padding:0 .2rem;opacity:.8}
+  footer{position:relative;z-index:3;text-align:center;font-size:.68rem;color:var(--text);opacity:.7;padding-top:.75rem}
+  .hidden{display:none !important}
+  /* Animations only when html.anim */
+  .anim .orb{animation:floatOrb var(--orb-speed) infinite ease-in-out alternate}
+  .anim .orb-2{animation-delay:calc(var(--orb-speed) * -.5)}
+  @keyframes floatOrb{0%{transform:translate(0,0) scale(1)}100%{transform:translate(60px,80px) scale(1.15)}}
+  .anim .card{animation:cardIn .9s cubic-bezier(.16,1,.3,1) both, cardFloat 6s ease-in-out infinite 1s;animation-delay:calc(var(--i) * .12s), calc(1s + var(--i) * .4s)}
+  @keyframes cardIn{0%{opacity:0;transform:translateY(40px) scale(.92)}100%{opacity:1;transform:translateY(0) scale(1)}}
+  @keyframes cardFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(calc(var(--float) * -1))}}
+  ${P.neon ? `.anim .card::before{animation:shimmer 8s linear infinite}@keyframes shimmer{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}` : ''}
+  .anim .arrow{animation:nudge 1.4s ease-in-out infinite}
+  @keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(5px)}}
+  .anim .step.active .num{animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--accent-line)}50%{box-shadow:0 0 0 6px transparent}}
+  @media (max-width:640px){.arrow{display:none}.guide{flex-direction:column;align-items:stretch}.step{max-width:none}}
+</style>
+</head>
+<body>
+  <div class="orb orb-1"></div><div class="orb orb-2"></div>
+  ${P.vignette ? '<div class="vignette"></div>' : ''}
+
+  <div class="topbar">
+    <div class="brand ${P.showBrand ? '' : 'hidden'}"><i>&#9641;</i> Presentation Showcase</div>
+    <div class="ctrls">
+      <button class="btn ${P.anim ? '' : 'off'}" id="bAnim" onclick="setAnim(!document.documentElement.classList.contains('anim'))">&#9889; Animations: <span id="animLbl">${P.anim ? 'ON' : 'OFF'}</span></button>
+      ${guideHtml ? `<button class="btn" id="bGuide" onclick="toggleGuide()">&#8801; Guide</button>` : ''}
+      <button class="btn" onclick="toggleFullscreen()">&#9974; Fullscreen</button>
+      <button class="btn danger" onclick="window.close()">&#10005; Close</button>
+    </div>
+  </div>
+
+  <main>
+    ${P.heading ? `<h1 class="heading">${esc(P.heading)}</h1>` : ''}
+    <div class="cards" data-count="${n}">${cardHtml}</div>
+    ${guideHtml}
+  </main>
+
+  <footer class="${P.showCredit ? '' : 'hidden'}">&copy; 2026 All rights reserved | Developer: DHStackWorks (dinethhesara20@gmail.com)</footer>
+
+  <script>
+    var GUIDE_ANIM = ${P.guideAnim ? 'true' : 'false'}, GUIDE_INT = ${Math.max(1, P.guideInt) * 1000};
+    var steps = Array.prototype.slice.call(document.querySelectorAll('.step'));
+    var guide = document.getElementById('guide');
+    var timer = null, idx = 0;
+    function tick(){ steps.forEach(function(s,j){ s.classList.toggle('active', j===idx); }); idx=(idx+1)%steps.length; }
+    function startSeq(){ if(!steps.length || !GUIDE_ANIM) return; if(guide) guide.classList.add('seq'); idx=0; tick(); clearInterval(timer); timer=setInterval(tick, GUIDE_INT); }
+    function stopSeq(){ clearInterval(timer); timer=null; if(guide) guide.classList.remove('seq'); steps.forEach(function(s){ s.classList.add('active'); }); }
+    function setAnim(on){
+      document.documentElement.classList.toggle('anim', on);
+      var b=document.getElementById('bAnim'); if(b) b.classList.toggle('off', !on);
+      var l=document.getElementById('animLbl'); if(l) l.textContent = on ? 'ON' : 'OFF';
+      if(on) startSeq(); else stopSeq();
+    }
+    function toggleGuide(){ if(guide) guide.classList.toggle('hidden'); requestAnimationFrame(fit); }
+
+    // Size every QR to the cell it lives in: the card wraps the QR, so the
+    // code takes all the room its cell allows minus the text around it.
+    var MIN_QR = 120;
+    function fit(){
+      document.querySelectorAll('.cell').forEach(function(cell){
+        var card = cell.querySelector('.card'), img = cell.querySelector('.qr img'), qr = cell.querySelector('.qr');
+        if(!card || !img) return;
+        var cs = getComputedStyle(card), qs = getComputedStyle(qr);
+        var padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(qs.paddingLeft) + parseFloat(qs.paddingRight) + 4;
+        var padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + parseFloat(qs.paddingTop) + parseFloat(qs.paddingBottom) + 4;
+        var textH = 0;
+        Array.prototype.forEach.call(card.children, function(el){
+          if(el === qr) return;
+          var es = getComputedStyle(el);
+          textH += el.getBoundingClientRect().height + parseFloat(es.marginTop) + parseFloat(es.marginBottom);
+        });
+        var w = cell.clientWidth - padX, h = cell.clientHeight - padY - textH;
+        var size = Math.max(MIN_QR, Math.floor(Math.min(w, h)));
+        img.style.width = size + 'px'; img.style.height = size + 'px';
       });
     }
-
-    items.forEach((item, index) => {
-      const cardEl = document.createElement("div");
-      cardEl.className = `presenter-card ${isAnimated ? 'animated' : ''}`;
-      
-      const qrId = `presQr_${index}`;
-      cardEl.innerHTML = `
-        <div style="font-size:1.2rem; font-weight:700; margin-bottom:4px; color:#fff;">${item.title}</div>
-        <div style="font-size:0.85rem; color:#94a3b8; margin-bottom:12px;">${item.sub}</div>
-        <div style="background:#fff; padding:12px; border-radius:12px;" id="${qrId}"></div>
-        <div class="presenter-steps">
-          <div class="presenter-step-item"><span>1. Open Camera</span></div>
-          <span class="presenter-arrow">➔</span>
-          <div class="presenter-step-item"><span>2. Point at QR</span></div>
-          <span class="presenter-arrow">➔</span>
-          <div class="presenter-step-item"><span>3. Tap Link</span></div>
-        </div>
-      `;
-      grid.appendChild(cardEl);
-
-      setTimeout(() => {
-        const presQr = new QRCodeStyling({
-          width: 200,
-          height: 200,
-          type: "canvas",
-          data: item.data,
-          dotsOptions: { color: "#0f172a", type: document.getElementById("dotsStyle").value },
-          backgroundOptions: { color: "#ffffff" },
-          cornersSquareOptions: { color: "#0f172a", type: document.getElementById("cornerSquareStyle").value }
-        });
-        presQr.append(document.getElementById(qrId));
-      }, 50);
+    var fitRaf = null;
+    function scheduleFit(){ cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fit); }
+    window.addEventListener('resize', scheduleFit);
+    window.addEventListener('orientationchange', scheduleFit);
+    document.addEventListener('fullscreenchange', scheduleFit);
+    if(window.ResizeObserver){ var ro = new ResizeObserver(scheduleFit); document.querySelectorAll('.cell').forEach(function(c){ ro.observe(c); }); }
+    if(document.fonts && document.fonts.ready){ document.fonts.ready.then(scheduleFit); }
+    window.addEventListener('load', scheduleFit);
+    scheduleFit();
+    function toggleFullscreen(){
+      if(!document.fullscreenElement){ document.documentElement.requestFullscreen().catch(function(){}); }
+      else if(document.exitFullscreen){ document.exitFullscreen(); }
+    }
+    document.addEventListener('keydown', function(e){
+      if(e.key==='f'||e.key==='F') toggleFullscreen();
+      if(e.key==='a'||e.key==='A') setAnim(!document.documentElement.classList.contains('anim'));
+      if(e.key==='g'||e.key==='G') toggleGuide();
     });
+    setAnim(${P.anim ? 'true' : 'false'});
+  <\/script>
+</body>
+</html>`;
+      }
 
-    document.getElementById("presenterModal").classList.add("active");
-  }
+      $('btnLaunchShowcase').addEventListener('click', async () => {
+        const win = window.open('', '_blank');
+        if (!win) { showToast('Please allow popups to launch the presentation'); return; }
+        win.document.write('<!DOCTYPE html><title>Preparing…</title><body style="margin:0;background:#030712;color:#9ca3af;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;font-size:14px">Preparing presentation…</body>');
+        try {
+          const specs = activeCardSpecs();
+          const imgs = await Promise.all(specs.map(s => renderQrDataUrl(s.data, 800)));
+          const cards = specs.map((s, i) => ({ ...s, img: imgs[i] }));
+          const html = buildPresenterHtml(readPresenterSettings(), cards);
+          win.document.open(); win.document.write(html); win.document.close();
+          showToast(`Presenter launched with ${cards.length} code${cards.length > 1 ? 's' : ''}`);
+        } catch (err) {
+          console.error(err);
+          win.close();
+          showToast('Failed to build presentation');
+        }
+      });
 
-  function closePresenter() {
-    document.getElementById("presenterModal").classList.remove("active");
-  }
-</script>
+      // ---------- 10. EXPORTS ----------
+      function showToast(message) {
+        const toast = $('toast');
+        $('toastMsg').textContent = message;
+        toast.classList.remove('translate-y-12', 'opacity-0');
+        toast.classList.add('translate-y-0', 'opacity-100');
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => { toast.classList.add('translate-y-12', 'opacity-0'); toast.classList.remove('translate-y-0', 'opacity-100'); }, 3000);
+      }
+
+      // Capture the card from a clone so the live preview never flickers.
+      async function captureCard({ scale, showGuide, transparent }) {
+        const card = $('qrCardPreview');
+        return html2canvas(card, {
+          scale, useCORS: true,
+          backgroundColor: transparent ? null : (document.documentElement.classList.contains('dark') ? '#111827' : '#ffffff'),
+          onclone: doc => {
+            const c = doc.getElementById('qrCardPreview');
+            c.classList.add('export-safe');
+            c.style.overflow = 'visible';
+            const acc = doc.getElementById('guideAccordion');
+            const content = doc.getElementById('guideContent');
+            if (showGuide) { content.classList.remove('hidden'); doc.getElementById('guideArrow').style.transform = 'rotate(180deg)'; }
+            else acc.style.display = 'none';
+          }
+        });
+      }
+
+      $('btnDownloadCard').addEventListener('click', async () => {
+        try {
+          const canvas = await captureCard({ scale: 4, showGuide: false, transparent: true });
+          const link = document.createElement('a');
+          link.download = 'QR-Studio-Card.png'; link.href = canvas.toDataURL('image/png'); link.click();
+          showToast('Exported card as PNG');
+        } catch (err) { showToast('Failed to export PNG'); }
+      });
+
+      $('btnDownloadPureQr').addEventListener('click', () => {
+        qrCode.download({ name: 'QR-Code', extension: 'png' });
+        showToast('Downloaded pure QR graphic');
+      });
+
+      $('btnDownloadPdf').addEventListener('click', async () => {
+        try {
+          const canvas = await captureCard({ scale: 3, showGuide: true, transparent: false });
+          const imgData = canvas.toDataURL('image/png');
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+          const pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight();
+          const props = pdf.getImageProperties(imgData);
+          let imgW = 120, imgH = (props.height * imgW) / props.width;
+          if (imgH > pageH - 40) { imgH = pageH - 40; imgW = (props.width * imgH) / props.height; }
+          // Centre on the page both horizontally and vertically for consistent placement
+          pdf.addImage(imgData, 'PNG', (pageW - imgW) / 2, (pageH - imgH) / 2, imgW, imgH);
+          pdf.save('QR-Studio-Document.pdf');
+          showToast('PDF document generated');
+        } catch (err) { showToast('Failed to export PDF'); }
+      });
+
+      $('btnCopyImage').addEventListener('click', () => {
+        const canvas = qrContainer.querySelector('canvas');
+        if (!canvas) { showToast('No image available to copy'); return; }
+        canvas.toBlob(async blob => {
+          if (!blob) { showToast('Clipboard copy not supported on this device'); return; }
+          try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); showToast('Image copied to clipboard!'); }
+          catch (e) { showToast('Clipboard access restricted'); }
+        });
+      });
+
+      updateQrCode();
+    });
+  </script>
 </body>
 </html>
